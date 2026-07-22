@@ -1,0 +1,26 @@
+name: partner
+description: SGX Partners B2B mobile app.
+publish_to: 'none'
+version: 1.0.0+1
+
+environment:
+  sdk: ^3.9.2
+
+dependencies:
+  flutter:
+    sdk: flutter
+  flutter_riverpod: ^3.0.0
+  go_router: ^16.0.0
+  flutter_svg: ^2.0.0
+  intl: ^0.20.0
+
+dev_dependencies:
+  flutter_lints: ^5.0.0
+
+flutter:
+  uses-material-design: true
+  assets:
+    - assets/branding/
+    - assets/images/products/
+    - assets/images/campaigns/
+    - assets/mock/
