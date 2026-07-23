@@ -8,7 +8,7 @@ class MoneyFormatter {
   static String format(MoneyAmount amount) {
     final formatter = NumberFormat.currency(
       name: amount.currencyCode,
-      symbol: '${amount.currencyCode} ',
+      symbol: 'Rs. ',
       decimalDigits: 0,
     );
     return formatter.format(amount.majorUnits);
