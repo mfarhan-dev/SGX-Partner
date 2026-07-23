@@ -1,59 +1,81 @@
 import 'package:flutter/material.dart';
-import 'package:go_router/go_router.dart';
 
-import '../../../../app/theme/app_colors.dart';
 import '../../../../app/theme/app_spacing.dart';
 import '../../../../shared/mock/sgx_mock_data.dart';
-import '../../../../shared/models/money_amount.dart';
 import '../../../../shared/widgets/sgx_cards.dart';
 import '../../../../shared/widgets/sgx_screen.dart';
 
-class WholesalerWalletScreen extends StatelessWidget {
+enum _ActivityFilter { all, rewards, withdraw, pending }
+
+class WholesalerWalletScreen extends StatefulWidget {
   const WholesalerWalletScreen({super.key});
 
   @override
+  State<WholesalerWalletScreen> createState() => _WholesalerWalletScreenState();
+}
+
+class _WholesalerWalletScreenState extends State<WholesalerWalletScreen> {
+  _ActivityFilter _filter = _ActivityFilter.all;
+
+  @override
   Widget build(BuildContext context) {
+    final transactions = wholesalerTransactions.where(_matchesFilter).toList();
+
     return SgxScreen(
-      title: 'Wallet',
-      showNotifications: true,
+      title: 'Recent Activity',
+      showNotifications: false,
       children: [
-        WalletHeroCard(
-          available: const MoneyAmount(cents: 1842000),
-          pending: const MoneyAmount(cents: 500000),
-          lifetime: const MoneyAmount(cents: 14234000),
-          onWithdraw: () => context.go('/wholesaler/withdrawals/new'),
+        SizedBox(
+          height: 40,
+          child: ListView(
+            scrollDirection: Axis.horizontal,
+            children: _ActivityFilter.values.map((filter) {
+              return Padding(
+                padding: const EdgeInsets.only(right: AppSpacing.sm),
+                child: ChoiceChip(
+                  label: Text(_labelFor(filter)),
+                  selected: _filter == filter,
+                  onSelected: (_) => setState(() => _filter = filter),
+                ),
+              );
+            }).toList(),
+          ),
         ),
         const SizedBox(height: AppSpacing.md),
-        Row(
-          children: [
-            Expanded(
-              child: FilledButton.icon(
-                onPressed: () => context.go('/wholesaler/withdrawals/new'),
-                icon: const Icon(Icons.payments_outlined),
-                label: const Text('Withdraw Money'),
-              ),
-            ),
-            const SizedBox(width: AppSpacing.sm),
-            IconButton.outlined(
-              onPressed: () => context.go('/wholesaler/withdrawals'),
-              icon: const Icon(Icons.receipt_long),
-            ),
-          ],
-        ),
-        const SizedBox(height: AppSpacing.sm),
-        const Row(
-          children: [
-            Icon(Icons.info_outline, size: 16, color: AppColors.mutedText),
-            SizedBox(width: 6),
-            Text('Minimum withdrawal is Rs. 500.'),
-          ],
-        ),
-        const SizedBox(height: AppSpacing.md),
-        Text('Recent activity', style: Theme.of(context).textTheme.titleMedium),
-        ...wholesalerTransactions.map(
+        ...transactions.map(
           (transaction) => TransactionRow(transaction: transaction),
         ),
+        if (transactions.isEmpty)
+          Padding(
+            padding: const EdgeInsets.only(top: AppSpacing.xl),
+            child: Center(
+              child: Text(
+                'No activity found',
+                style: Theme.of(context).textTheme.bodyLarge?.copyWith(
+                  color: Theme.of(context).colorScheme.onSurfaceVariant,
+                ),
+              ),
+            ),
+          ),
       ],
     );
+  }
+
+  bool _matchesFilter(MockTransaction transaction) {
+    return switch (_filter) {
+      _ActivityFilter.all => true,
+      _ActivityFilter.rewards => transaction.amount.cents > 0,
+      _ActivityFilter.withdraw => transaction.amount.cents < 0,
+      _ActivityFilter.pending => transaction.status == 'Pending',
+    };
+  }
+
+  String _labelFor(_ActivityFilter filter) {
+    return switch (filter) {
+      _ActivityFilter.all => 'All',
+      _ActivityFilter.rewards => 'Rewards',
+      _ActivityFilter.withdraw => 'Withdraw',
+      _ActivityFilter.pending => 'Pending',
+    };
   }
 }

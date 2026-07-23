@@ -10,6 +10,16 @@ import '../../../../shared/widgets/sgx_cards.dart';
 class MechanicHomeScreen extends StatelessWidget {
   const MechanicHomeScreen({super.key});
 
+  static const _availableBalance = MoneyAmount(cents: 428500);
+  static const _activeWithdrawal = MockWithdrawal(
+    id: 'wd-001',
+    amount: MoneyAmount(cents: 150000),
+    method: 'JazzCash',
+    date: 'Submitted today',
+    status: 'Pending',
+    note: 'SGX is reviewing the request. No action is required right now.',
+  );
+
   @override
   Widget build(BuildContext context) {
     return Scaffold(
@@ -52,46 +62,17 @@ class MechanicHomeScreen extends StatelessWidget {
           padding: const EdgeInsets.all(AppSpacing.md),
           children: [
             WalletHeroCard(
-              available: const MoneyAmount(cents: 428500),
+              available: _availableBalance,
               pending: const MoneyAmount(cents: 150000),
               lifetime: const MoneyAmount(cents: 2854000),
               compact: true,
               onWithdraw: () => context.go('/mechanic/withdrawals/new'),
             ),
             const SizedBox(height: AppSpacing.md),
-            Row(
-              children: [
-                Text(
-                  'Latest scan',
-                  style: Theme.of(context).textTheme.titleMedium,
-                ),
-                const Spacer(),
-                TextButton(
-                  onPressed: () => context.go('/mechanic/scans'),
-                  child: const Text('History'),
-                ),
-              ],
-            ),
-            TransactionRow(
-              transaction: MockTransaction(
-                title: 'Shell Advance AX7',
-                subtitle: 'Today · 10:24 AM',
-                amount: const MoneyAmount(cents: 1500),
-                icon: Icons.oil_barrel_outlined,
-                tone: AppColors.success,
-                status: 'Confirmed',
-              ),
-            ),
-            const SizedBox(height: AppSpacing.sm),
-            Card(
-              color: AppColors.warningContainer,
-              child: ListTile(
-                onTap: () => context.go('/mechanic/withdrawals/wd-001'),
-                leading: const Icon(Icons.schedule, color: AppColors.warning),
-                title: const Text('Withdrawal in progress'),
-                subtitle: const Text('Rs. 1,500 · JazzCash · Submitted today'),
-                trailing: const Icon(Icons.chevron_right),
-              ),
+            const WithdrawalStatusCard(
+              withdrawal: _activeWithdrawal,
+              routePrefix: '/mechanic/withdrawals',
+              availableBalance: _availableBalance,
             ),
             const SizedBox(height: AppSpacing.md),
             CampaignTile(campaign: mockCampaigns.first),

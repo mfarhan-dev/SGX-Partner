@@ -11,8 +11,8 @@ class WholesalerProfileScreen extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return SgxScreen(
-      title: 'Profile',
-      showNotifications: true,
+      title: 'Settings',
+      showNotifications: false,
       children: [
         Container(
           padding: const EdgeInsets.all(AppSpacing.md),
@@ -42,8 +42,6 @@ class WholesalerProfileScreen extends StatelessWidget {
                       'Muhammad Farhan · Lahore',
                       style: TextStyle(color: Colors.white70),
                     ),
-                    SizedBox(height: 6),
-                    Chip(label: Text('ACTIVE WHOLESALER')),
                   ],
                 ),
               ),

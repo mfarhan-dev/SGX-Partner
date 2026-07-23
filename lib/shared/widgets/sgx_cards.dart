@@ -346,6 +346,189 @@ class TransactionRow extends StatelessWidget {
   }
 }
 
+class WithdrawalStatusCard extends StatelessWidget {
+  const WithdrawalStatusCard({
+    super.key,
+    required this.withdrawal,
+    required this.routePrefix,
+    required this.availableBalance,
+  });
+
+  final MockWithdrawal withdrawal;
+  final String routePrefix;
+  final MoneyAmount availableBalance;
+
+  @override
+  Widget build(BuildContext context) {
+    final color = _statusColor(withdrawal.status);
+    final paymentSent = withdrawal.status == 'Payment Sent';
+    final completed = withdrawal.status == 'Confirmed';
+    final title = switch (withdrawal.status) {
+      'Payment Sent' => 'Payment sent by SGX',
+      'Confirmed' => 'Withdrawal completed',
+      'Disputed' => 'Withdrawal needs review',
+      _ => 'Withdrawal requested',
+    };
+    final statusLabel = paymentSent ? 'Confirm' : withdrawal.status;
+    final remaining = MoneyAmount(
+      cents: (availableBalance.cents - withdrawal.amount.cents).clamp(
+        0,
+        availableBalance.cents,
+      ),
+    );
+
+    return Card(
+      margin: EdgeInsets.zero,
+      color: paymentSent || completed ? null : AppColors.warningContainer,
+      child: InkWell(
+        borderRadius: BorderRadius.circular(12),
+        onTap: () => context.go('$routePrefix/${withdrawal.id}'),
+        child: Padding(
+          padding: const EdgeInsets.all(AppSpacing.md),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Row(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  CircleAvatar(
+                    backgroundColor: color.withValues(alpha: 0.13),
+                    child: Icon(_statusIcon(withdrawal.status), color: color),
+                  ),
+                  const SizedBox(width: AppSpacing.sm),
+                  Expanded(
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Row(
+                          children: [
+                            Expanded(
+                              child: Text(
+                                title,
+                                style: Theme.of(context).textTheme.titleMedium,
+                              ),
+                            ),
+                            _MiniPill(label: statusLabel, color: color),
+                          ],
+                        ),
+                        const SizedBox(height: 4),
+                        Text(
+                          '${MoneyFormatter.format(withdrawal.amount)} · ${withdrawal.method} · ${withdrawal.date}',
+                          style: Theme.of(context).textTheme.bodySmall
+                              ?.copyWith(color: AppColors.mutedText),
+                        ),
+                      ],
+                    ),
+                  ),
+                  const SizedBox(width: AppSpacing.xs),
+                  const Icon(Icons.chevron_right),
+                ],
+              ),
+              const SizedBox(height: AppSpacing.md),
+              Row(
+                children: [
+                  Expanded(
+                    child: _WithdrawalAmountBox(
+                      label: paymentSent ? 'Withdrawn' : 'Requested',
+                      value: MoneyFormatter.format(withdrawal.amount),
+                    ),
+                  ),
+                  const SizedBox(width: AppSpacing.sm),
+                  Expanded(
+                    child: _WithdrawalAmountBox(
+                      label: paymentSent ? 'Left to withdraw' : 'Available',
+                      value: MoneyFormatter.format(
+                        paymentSent ? remaining : availableBalance,
+                      ),
+                    ),
+                  ),
+                ],
+              ),
+              const SizedBox(height: AppSpacing.sm),
+              Text(
+                paymentSent
+                    ? 'Confirm only after the amount is received.'
+                    : withdrawal.note,
+                style: Theme.of(
+                  context,
+                ).textTheme.bodySmall?.copyWith(color: AppColors.mutedText),
+              ),
+              if (paymentSent) ...[
+                const SizedBox(height: AppSpacing.sm),
+                SizedBox(
+                  width: double.infinity,
+                  child: FilledButton(
+                    onPressed: () =>
+                        context.go('$routePrefix/${withdrawal.id}'),
+                    child: const Text('Confirm received'),
+                  ),
+                ),
+              ],
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+
+  IconData _statusIcon(String status) {
+    return switch (status) {
+      'Payment Sent' => Icons.send_outlined,
+      'Confirmed' => Icons.check_circle_outline,
+      'Disputed' => Icons.error_outline,
+      _ => Icons.schedule_outlined,
+    };
+  }
+
+  Color _statusColor(String status) {
+    return switch (status) {
+      'Confirmed' || 'Refunded' => AppColors.success,
+      'Disputed' => AppColors.error,
+      'Payment Sent' => AppColors.primary,
+      _ => AppColors.warning,
+    };
+  }
+}
+
+class _WithdrawalAmountBox extends StatelessWidget {
+  const _WithdrawalAmountBox({required this.label, required this.value});
+
+  final String label;
+  final String value;
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      padding: const EdgeInsets.all(AppSpacing.sm),
+      decoration: BoxDecoration(
+        color: AppColors.surfaceContainer,
+        borderRadius: BorderRadius.circular(12),
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Text(
+            label,
+            style: Theme.of(context).textTheme.labelSmall?.copyWith(
+              color: AppColors.mutedText,
+              fontWeight: FontWeight.w800,
+            ),
+          ),
+          const SizedBox(height: 2),
+          Text(
+            value,
+            maxLines: 1,
+            overflow: TextOverflow.ellipsis,
+            style: Theme.of(
+              context,
+            ).textTheme.titleSmall?.copyWith(fontWeight: FontWeight.w900),
+          ),
+        ],
+      ),
+    );
+  }
+}
+
 class WithdrawalCard extends StatelessWidget {
   const WithdrawalCard({
     super.key,

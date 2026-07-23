@@ -67,9 +67,20 @@ class _MechanicNavItem extends StatelessWidget {
   final String label;
   final String route;
 
+  bool _isSelected(String path) {
+    if (path == route || path.startsWith('$route/')) return true;
+    if (route == '/mechanic/wallet') {
+      return path.startsWith('/mechanic/withdrawals') ||
+          path.startsWith('/mechanic/scans');
+    }
+    if (route == '/products') return path.startsWith('/products');
+    return false;
+  }
+
   @override
   Widget build(BuildContext context) {
-    final selected = GoRouterState.of(context).uri.path == route;
+    final path = GoRouterState.of(context).uri.path;
+    final selected = _isSelected(path);
     final colorScheme = Theme.of(context).colorScheme;
 
     return Expanded(

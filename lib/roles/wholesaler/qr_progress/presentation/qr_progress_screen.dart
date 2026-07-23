@@ -20,7 +20,7 @@ class QrProgressScreen extends StatelessWidget {
 
     return SgxScreen(
       title: 'QR Progress',
-      showNotifications: true,
+      showNotifications: false,
       children: [
         Card(
           color: AppColors.surfaceContainer,
