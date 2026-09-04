@@ -1,5 +1,4 @@
 import 'package:flutter/material.dart';
-import 'package:flutter_svg/flutter_svg.dart';
 
 class SgxLogo extends StatelessWidget {
   const SgxLogo({super.key, this.size = 56});
@@ -11,10 +10,14 @@ class SgxLogo extends StatelessWidget {
     return Semantics(
       label: 'SGX Partners',
       image: true,
-      child: SvgPicture.asset(
-        'assets/branding/sgx-app-icon.svg',
-        width: size,
-        height: size,
+      child: ClipRRect(
+        borderRadius: BorderRadius.circular(size * 0.18),
+        child: Image.asset(
+          'assets/branding/sgx-app-icon.png',
+          width: size,
+          height: size,
+          fit: BoxFit.contain,
+        ),
       ),
     );
   }

@@ -1,0 +1,299 @@
+{
+  "$schema": "https://sgx.local/schemas/b2b-mechanic-design-token.schema.json",
+  "name": "SGX Partners Mechanic Design Tokens",
+  "appName": "SGX Partners",
+  "module": "mechanic",
+  "version": "1.0.0",
+  "platform": "flutter",
+  "designSystem": "Material Design 3",
+  "source": {
+    "inheritsFrom": "docs/mobile-app-design/customer/design-token.json",
+    "approvedAppIcon": "docs/mobile-app-design/customer/sgx-app-icon.svg",
+    "notes": "Uses the shared SGX theme. Navigation is adapted to the approved reference with four labeled destinations and a raised center QR scan action."
+  },
+  "brand": {
+    "appIcon": "../../customer/sgx-app-icon.svg",
+    "sharedAcrossRoles": true,
+    "preserveOriginalArtwork": true,
+    "allowTint": false,
+    "placementsDp": {
+      "splash": 112,
+      "phoneLogin": 72,
+      "otpVerification": 48,
+      "mechanicOnboarding": 48,
+      "homeAppBar": 32
+    },
+    "excludedPlacements": ["bottomNavigation", "scanAction"]
+  },
+  "decisions": {
+    "androidFirst": true,
+    "iosCompatible": true,
+    "material3": true,
+    "dynamicColor": false,
+    "supportsDarkTheme": true,
+    "languages": ["en", "ur"],
+    "defaultDirection": "ltr",
+    "urduReady": "rtl",
+    "minimumTouchTargetDp": 48,
+    "standardNavigationDestinations": 4,
+    "centerScanAction": true,
+    "scanActionMinimumDp": 64,
+    "onlineScanOnly": true,
+    "offlineQueue": false,
+    "showProductPrices": false,
+    "showInvoiceRedemption": false
+  },
+  "color": {
+    "seed": "oklch(0.3582 0.1289 265.52)",
+    "light": {
+      "primary": "oklch(0.3582 0.1289 265.52)",
+      "onPrimary": "oklch(1 0 0)",
+      "primaryContainer": "oklch(0.2316 0.0907 265.52)",
+      "onPrimaryContainer": "oklch(0.9385 0.0285 264.18)",
+      "secondary": "oklch(0.9385 0.0285 264.18)",
+      "onSecondary": "oklch(0.2077 0.0398 265.75)",
+      "secondaryContainer": "oklch(0.9683 0.0069 248.08)",
+      "onSecondaryContainer": "oklch(0.2077 0.0398 265.75)",
+      "tertiary": "oklch(0.6235 0.1737 145.94)",
+      "onTertiary": "oklch(1 0 0)",
+      "error": "oklch(0.5266 0.2049 27.43)",
+      "onError": "oklch(1 0 0)",
+      "errorContainer": "oklch(0.5266 0.2049 27.43 / 0.12)",
+      "onErrorContainer": "oklch(0.5266 0.2049 27.43)",
+      "surface": "oklch(0.9789 0.0042 247.86)",
+      "onSurface": "oklch(0.2077 0.0398 265.75)",
+      "surfaceVariant": "oklch(0.9683 0.0069 248.08)",
+      "onSurfaceVariant": "oklch(0.5510 0.0234 264.37)",
+      "surfaceContainerLowest": "oklch(1 0 0)",
+      "surfaceContainerLow": "oklch(0.9789 0.0042 247.86)",
+      "surfaceContainer": "oklch(0.9683 0.0069 248.08)",
+      "surfaceContainerHigh": "oklch(0.9385 0.0285 264.18)",
+      "surfaceContainerHighest": "oklch(0.9219 0.0098 247.88)",
+      "outline": "oklch(0.5510 0.0234 264.37)",
+      "outlineVariant": "oklch(0.9219 0.0098 247.88)",
+      "success": "oklch(0.6235 0.1737 145.94)",
+      "onSuccess": "oklch(1 0 0)",
+      "successContainer": "oklch(0.6235 0.1737 145.94 / 0.15)",
+      "warning": "oklch(0.8388 0.1614 84.42)",
+      "onWarning": "oklch(0.3 0.08 80)",
+      "warningContainer": "oklch(0.8388 0.1614 84.42 / 0.18)"
+    },
+    "dark": {
+      "primary": "oklch(0.4683 0.1371 265.52)",
+      "onPrimary": "oklch(1 0 0)",
+      "primaryContainer": "oklch(0.2316 0.0907 265.52)",
+      "onPrimaryContainer": "oklch(0.9385 0.0285 264.18)",
+      "secondary": "oklch(0.269 0 0)",
+      "onSecondary": "oklch(0.985 0 0)",
+      "error": "oklch(0.5266 0.2049 27.43)",
+      "onError": "oklch(1 0 0)",
+      "errorContainer": "oklch(0.5266 0.2049 27.43 / 0.18)",
+      "onErrorContainer": "oklch(0.985 0 0)",
+      "surface": "oklch(0.145 0 0)",
+      "onSurface": "oklch(0.985 0 0)",
+      "surfaceVariant": "oklch(0.205 0 0)",
+      "onSurfaceVariant": "oklch(0.708 0 0)",
+      "surfaceContainerLowest": "oklch(0.105 0 0)",
+      "surfaceContainerLow": "oklch(0.145 0 0)",
+      "surfaceContainer": "oklch(0.205 0 0)",
+      "surfaceContainerHigh": "oklch(0.235 0 0)",
+      "surfaceContainerHighest": "oklch(0.269 0 0)",
+      "outline": "oklch(0.708 0 0)",
+      "outlineVariant": "oklch(1 0 0 / 10%)",
+      "success": "oklch(0.6235 0.1737 145.94)",
+      "onSuccess": "oklch(0.145 0 0)",
+      "successContainer": "oklch(0.6235 0.1737 145.94 / 0.18)",
+      "warning": "oklch(0.8388 0.1614 84.42)",
+      "onWarning": "oklch(0.145 0 0)",
+      "warningContainer": "oklch(0.8388 0.1614 84.42 / 0.18)"
+    },
+    "scanResult": {
+      "success": {"role": "success", "label": "Reward added"},
+      "alreadyScanned": {"role": "error", "label": "Already scanned"},
+      "notActive": {"role": "warning", "label": "QR not active"},
+      "invalid": {"role": "error", "label": "Invalid QR"},
+      "expired": {"role": "error", "label": "QR expired"},
+      "retryableError": {"role": "warning", "label": "Could not check QR"}
+    },
+    "withdrawalStatus": {
+      "pending": {"role": "warning", "label": "Pending"},
+      "paid": {"role": "primary", "label": "Payment Sent"},
+      "confirmed": {"role": "success", "label": "Confirmed"},
+      "disputed": {"role": "error", "label": "Disputed"},
+      "autoConfirmed": {"role": "surfaceVariant", "label": "Auto-confirmed"},
+      "refunded": {"role": "success", "label": "Refunded"}
+    }
+  },
+  "typography": {
+    "fontFamily": {
+      "default": "Roboto",
+      "urduFallback": "Noto Nastaliq Urdu",
+      "mono": "Roboto Mono"
+    },
+    "usage": {
+      "screenTitle": {"size": 24, "lineHeight": 32, "weight": 600},
+      "sectionTitle": {"size": 16, "lineHeight": 24, "weight": 600},
+      "balanceHero": {"size": 32, "lineHeight": 40, "weight": 700},
+      "rewardResult": {"size": 40, "lineHeight": 48, "weight": 700},
+      "cardTitle": {"size": 16, "lineHeight": 24, "weight": 600},
+      "body": {"size": 14, "lineHeight": 20, "weight": 400},
+      "supporting": {"size": 12, "lineHeight": 16, "weight": 400},
+      "button": {"size": 14, "lineHeight": 20, "weight": 600},
+      "badge": {"size": 11, "lineHeight": 16, "weight": 600}
+    },
+    "rules": {
+      "allowWrap": true,
+      "textScaleSupportPercent": 200,
+      "financialNumbers": "tabular figures when available"
+    }
+  },
+  "shape": {
+    "extraSmall": 4,
+    "small": 8,
+    "medium": 12,
+    "large": 16,
+    "extraLarge": 28,
+    "full": 9999,
+    "components": {
+      "button": "full",
+      "chip": "full",
+      "badge": "full",
+      "textField": "small",
+      "card": "medium",
+      "walletHero": "large",
+      "scanAction": "full",
+      "scanFrame": "large",
+      "bottomSheet": "extraLarge",
+      "dialog": "extraLarge",
+      "image": "medium"
+    }
+  },
+  "spacing": {
+    "unit": 4,
+    "scale": {"0": 0, "1": 4, "2": 8, "3": 12, "4": 16, "5": 20, "6": 24, "8": 32, "10": 40, "12": 48},
+    "screenPadding": 16,
+    "cardPadding": 16,
+    "sectionGap": 24,
+    "fieldGap": 16,
+    "listGap": 12
+  },
+  "sizing": {
+    "touchTargetMin": 48,
+    "bottomAppBarHeight": 80,
+    "centerScanAction": 72,
+    "centerScanIcon": 28,
+    "topAppBarSmall": 64,
+    "buttonHeight": 48,
+    "textFieldHeight": 56,
+    "chipHeight": 32,
+    "scanFrameWidthFraction": 0.68,
+    "productCardImageAspectRatio": "4:3",
+    "campaignBannerAspectRatio": "16:9",
+    "maxContentWidthExpanded": 1040
+  },
+  "elevation": {
+    "level0": {"dp": 0, "usage": "screen and camera overlay surfaces"},
+    "level1": {"dp": 1, "usage": "wallet hero and bottom app bar tonal surface"},
+    "level2": {"dp": 3, "usage": "menus and scrolled top app bar"},
+    "level3": {"dp": 6, "usage": "center scan action, result surfaces, dialogs and sheets"}
+  },
+  "motion": {
+    "standard": {"durationMs": 300, "curve": "cubic-bezier(0.2, 0, 0, 1)"},
+    "enter": {"durationMs": 250, "curve": "cubic-bezier(0, 0, 0, 1)"},
+    "exit": {"durationMs": 200, "curve": "cubic-bezier(0.3, 0, 1, 1)"},
+    "scanDetected": {"durationMs": 200, "behavior": "pause camera and highlight scan frame once"},
+    "scanSuccess": {"durationMs": 350, "behavior": "single success scale/crossfade; respect reduced motion"}
+  },
+  "components": {
+    "bottomAppBar": {
+      "leftItems": ["Home", "Products"],
+      "centerAction": "Scan",
+      "rightItems": ["Wallet", "Profile"],
+      "showLabels": "always",
+      "respectSafeArea": true
+    },
+    "scanAction": {
+      "component": "FloatingActionButton",
+      "placement": "centerDocked",
+      "containerRole": "primary",
+      "icon": "qr_code_scanner",
+      "semanticLabel": "Scan QR"
+    },
+    "topAppBar": {"type": "small", "actions": ["notifications"]},
+    "buttons": {
+      "primary": "FilledButton",
+      "secondary": "OutlinedButton",
+      "tertiary": "TextButton",
+      "tonal": "FilledButton.tonal"
+    },
+    "cards": {
+      "walletHero": "Card.filled",
+      "scanAction": "Card.filled",
+      "scanHistory": "ListTile on surface",
+      "transaction": "ListTile on surface",
+      "withdrawal": "Card.outlined",
+      "product": "Card.outlined",
+      "campaign": "Card.filled"
+    },
+    "feedback": {
+      "scanResult": "Full-screen modal surface or large overlay",
+      "withdrawalConfirmation": "ModalBottomSheet",
+      "criticalConfirmation": "AlertDialog",
+      "snackbar": true,
+      "progressIndicator": true
+    }
+  },
+  "icons": {
+    "style": "Material Symbols Rounded",
+    "navigation": {
+      "home": "home",
+      "products": "category",
+      "scan": "qr_code_scanner",
+      "wallet": "account_balance_wallet",
+      "profile": "person"
+    },
+    "actions": {
+      "notifications": "notifications",
+      "back": "arrow_back",
+      "torch": "flashlight_on",
+      "withdraw": "payments",
+      "language": "language",
+      "theme": "dark_mode",
+      "contact": "support_agent",
+      "logout": "logout"
+    },
+    "scanStatus": {
+      "success": "check_circle",
+      "alreadyScanned": "block",
+      "notActive": "schedule",
+      "invalid": "qr_code_2",
+      "expired": "event_busy",
+      "offline": "wifi_off",
+      "retry": "refresh"
+    }
+  },
+  "contentGuidelines": {
+    "currencyFormat": "Rs. X,XXX",
+    "phoneFormat": "0300-1234567",
+    "dateFormat": "DD MMM YYYY",
+    "timeFormat": "HH:mm",
+    "tone": "plain, respectful, direct",
+    "buttonLabels": "specific verbs; never OK or Submit",
+    "maxPrimaryActionsPerScreen": 1,
+    "scannerInstruction": "Place the QR inside the frame.",
+    "offlineScannerMessage": "Internet is required to scan a QR. Please reconnect and try again.",
+    "avoidTerms": ["sync queue", "pending scan", "payload", "signature", "conversion rate", "invoice redemption"]
+  },
+  "accessibility": {
+    "minTouchTargetDp": 48,
+    "scanActionMinDp": 64,
+    "normalTextContrast": "4.5:1 minimum",
+    "largeTextContrast": "3:1 minimum",
+    "statusNotColorOnly": true,
+    "screenReaderLabelsRequired": true,
+    "scanActionSemanticLabel": "Scan QR",
+    "supportsTextScale": "up to 200 percent without overlap",
+    "keyboardAvoidance": "forms remain usable when IME is open",
+    "reducedMotion": "result animations become crossfades"
+  }
+}

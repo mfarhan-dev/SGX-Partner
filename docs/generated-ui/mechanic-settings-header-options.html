@@ -1,0 +1,597 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>SGX Partner Settings Header Options</title>
+    <style>
+      :root {
+        --primary: #1f3f97;
+        --primary-dark: #162b66;
+        --surface: #f7f8fc;
+        --surface-soft: #f0f1f7;
+        --card: #ffffff;
+        --text: #202432;
+        --muted: #777d8c;
+        --border: #e1e4ed;
+        --danger: #b3261e;
+        --shadow: 0 16px 36px rgba(16, 24, 40, 0.1);
+      }
+
+      * {
+        box-sizing: border-box;
+      }
+
+      body {
+        margin: 0;
+        background: #eef1f7;
+        color: var(--text);
+        font-family: Inter, ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont,
+          "Segoe UI", sans-serif;
+      }
+
+      .page {
+        padding: 28px;
+      }
+
+      .page-header {
+        max-width: 1220px;
+        margin: 0 auto 24px;
+      }
+
+      .page-header h1 {
+        margin: 0 0 8px;
+        font-size: 28px;
+        line-height: 1.15;
+      }
+
+      .page-header p {
+        margin: 0;
+        max-width: 760px;
+        color: var(--muted);
+        font-size: 15px;
+        line-height: 1.55;
+      }
+
+      .options {
+        display: grid;
+        grid-template-columns: repeat(3, minmax(300px, 1fr));
+        gap: 24px;
+        max-width: 1220px;
+        margin: 0 auto;
+      }
+
+      .option {
+        display: grid;
+        gap: 12px;
+      }
+
+      .option-title {
+        display: flex;
+        align-items: baseline;
+        justify-content: space-between;
+        gap: 12px;
+      }
+
+      .option-title h2 {
+        margin: 0;
+        font-size: 16px;
+      }
+
+      .option-title span {
+        color: var(--muted);
+        font-size: 12px;
+        font-weight: 700;
+        text-transform: uppercase;
+      }
+
+      .phone {
+        width: 100%;
+        max-width: 390px;
+        height: 820px;
+        margin: 0 auto;
+        overflow: hidden;
+        border: 10px solid #111827;
+        border-radius: 42px;
+        background: var(--surface);
+        box-shadow: var(--shadow);
+      }
+
+      .screen {
+        height: 100%;
+        overflow-y: auto;
+        scrollbar-width: none;
+        background: var(--surface);
+      }
+
+      .screen::-webkit-scrollbar {
+        display: none;
+      }
+
+      .status {
+        position: sticky;
+        top: 0;
+        z-index: 20;
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        height: 48px;
+        padding: 0 24px;
+        background: rgba(247, 248, 252, 0.96);
+        font-size: 14px;
+        font-weight: 800;
+      }
+
+      .signals {
+        display: flex;
+        gap: 7px;
+        align-items: center;
+      }
+
+      .dot {
+        width: 8px;
+        height: 8px;
+        border-radius: 999px;
+        background: #111827;
+      }
+
+      .battery {
+        width: 22px;
+        height: 12px;
+        border-radius: 3px;
+        background: #22c55e;
+      }
+
+      .content {
+        padding: 0 18px 112px;
+      }
+
+      .avatar {
+        display: grid;
+        place-items: center;
+        flex: 0 0 auto;
+        border-radius: 999px;
+        background: #dfe5ff;
+        color: #172554;
+        font-weight: 800;
+      }
+
+      .hero-plain {
+        display: flex;
+        align-items: center;
+        gap: 14px;
+        padding: 20px 0 18px;
+      }
+
+      .hero-plain .avatar {
+        width: 64px;
+        height: 64px;
+        font-size: 24px;
+      }
+
+      .identity h3 {
+        margin: 0 0 4px;
+        font-size: 24px;
+        line-height: 1.05;
+      }
+
+      .identity p {
+        margin: 0;
+        color: var(--muted);
+        font-size: 15px;
+        line-height: 1.35;
+      }
+
+      .toolbar-title {
+        height: 58px;
+        display: flex;
+        align-items: center;
+        padding: 0 18px;
+        background: var(--surface);
+      }
+
+      .toolbar-title h3 {
+        margin: 0;
+        font-size: 26px;
+        font-weight: 700;
+      }
+
+      .collapsing {
+        position: sticky;
+        top: 48px;
+        z-index: 12;
+        height: 164px;
+        overflow: hidden;
+        background: rgba(247, 248, 252, 0.96);
+        border-bottom: 1px solid transparent;
+        transition: height 160ms ease, border-color 160ms ease;
+      }
+
+      .screen.scrolled .collapsing {
+        height: 64px;
+        border-color: var(--border);
+      }
+
+      .collapse-inner {
+        position: relative;
+        height: 164px;
+        padding: 16px 18px;
+      }
+
+      .expanded-id,
+      .collapsed-id {
+        position: absolute;
+        inset: 16px 18px auto;
+        display: flex;
+        align-items: center;
+        gap: 13px;
+        transition: opacity 160ms ease, transform 160ms ease;
+      }
+
+      .expanded-id {
+        top: 26px;
+      }
+
+      .expanded-id .avatar {
+        width: 72px;
+        height: 72px;
+        font-size: 26px;
+      }
+
+      .collapsed-id {
+        top: 12px;
+        opacity: 0;
+        transform: translateY(12px);
+      }
+
+      .collapsed-id .avatar {
+        width: 40px;
+        height: 40px;
+        font-size: 16px;
+      }
+
+      .collapsed-id h3 {
+        margin: 0;
+        font-size: 17px;
+      }
+
+      .collapsed-id p {
+        margin: 1px 0 0;
+        color: var(--muted);
+        font-size: 12px;
+      }
+
+      .screen.scrolled .expanded-id {
+        opacity: 0;
+        transform: translateY(-16px);
+      }
+
+      .screen.scrolled .collapsed-id {
+        opacity: 1;
+        transform: translateY(0);
+      }
+
+      .compact-header {
+        padding: 16px 18px 10px;
+      }
+
+      .compact-card {
+        display: flex;
+        gap: 13px;
+        align-items: center;
+        padding: 14px;
+        border: 1px solid var(--border);
+        border-radius: 18px;
+        background: var(--card);
+      }
+
+      .compact-card .avatar {
+        width: 56px;
+        height: 56px;
+        font-size: 20px;
+      }
+
+      .card {
+        overflow: hidden;
+        margin-top: 14px;
+        border: 1px solid var(--border);
+        border-radius: 18px;
+        background: var(--card);
+      }
+
+      .list-row {
+        display: grid;
+        grid-template-columns: 34px 1fr 24px;
+        gap: 12px;
+        align-items: center;
+        min-height: 72px;
+        padding: 13px 16px;
+        border-bottom: 1px solid var(--border);
+      }
+
+      .list-row:last-child {
+        border-bottom: 0;
+      }
+
+      .row-icon {
+        display: grid;
+        place-items: center;
+        width: 34px;
+        height: 34px;
+        border-radius: 10px;
+        color: #4b5563;
+        background: #f3f4f8;
+        font-size: 18px;
+      }
+
+      .list-row h4 {
+        margin: 0 0 3px;
+        font-size: 17px;
+        line-height: 1.2;
+      }
+
+      .list-row p {
+        margin: 0;
+        color: var(--muted);
+        font-size: 14px;
+      }
+
+      .chevron {
+        color: #4b5563;
+        font-size: 26px;
+      }
+
+      .logout {
+        display: flex;
+        justify-content: center;
+        align-items: center;
+        gap: 8px;
+        height: 48px;
+        margin-top: 18px;
+        border: 1px solid #8f949f;
+        border-radius: 999px;
+        background: transparent;
+        color: var(--danger);
+        font-size: 15px;
+        font-weight: 800;
+      }
+
+      .version {
+        margin: 18px 0 0;
+        text-align: center;
+        color: var(--muted);
+        font-size: 13px;
+      }
+
+      .nav {
+        position: sticky;
+        bottom: 0;
+        display: grid;
+        grid-template-columns: repeat(5, 1fr);
+        align-items: center;
+        height: 82px;
+        padding: 4px 10px 12px;
+        background: #f0f1f8;
+        border-top: 1px solid var(--border);
+      }
+
+      .nav-item {
+        display: grid;
+        justify-items: center;
+        gap: 4px;
+        color: #202432;
+        font-size: 11px;
+        font-weight: 700;
+      }
+
+      .nav-icon {
+        font-size: 22px;
+      }
+
+      .nav-item.active {
+        color: var(--primary);
+      }
+
+      .scan {
+        width: 58px;
+        height: 58px;
+        margin-top: -30px;
+        border-radius: 18px;
+        background: #dfe5ff;
+        display: grid;
+        place-items: center;
+        box-shadow: 0 10px 22px rgba(31, 63, 151, 0.25);
+      }
+
+      .spacer {
+        height: 220px;
+      }
+
+      .hint {
+        margin: 0;
+        color: var(--muted);
+        font-size: 13px;
+        line-height: 1.45;
+      }
+
+      @media (max-width: 1080px) {
+        .options {
+          grid-template-columns: 1fr;
+        }
+      }
+    </style>
+  </head>
+  <body>
+    <main class="page">
+      <header class="page-header">
+        <h1>Mechanic Settings Header Options</h1>
+        <p>
+          Three possible directions for the SGX Partner settings screen. The second option
+          includes the collapsible header behavior: scroll inside the phone to see the identity
+          collapse into the app bar.
+        </p>
+      </header>
+
+      <section class="options">
+        <article class="option">
+          <div class="option-title">
+            <h2>Option A: Home-Style Static Header</h2>
+            <span>Simple</span>
+          </div>
+          <div class="phone">
+            <div class="screen">
+              <div class="status">
+                <span>1:18</span>
+                <span class="signals"><i class="dot"></i><i class="dot"></i><i class="battery"></i></span>
+              </div>
+              <div class="content">
+                <div class="hero-plain">
+                  <div class="avatar">MF</div>
+                  <div class="identity">
+                    <h3>Muhammad Farhan</h3>
+                    <p>Farhan Workshop &middot; Lahore</p>
+                    <p>0300-1234567</p>
+                  </div>
+                </div>
+                <section class="card">
+                  <div class="list-row"><div class="row-icon">P</div><div><h4>Verified Phone</h4><p>0300-1234567</p></div><div class="chevron">-</div></div>
+                  <div class="list-row"><div class="row-icon">W</div><div><h4>Workshop</h4><p>Farhan Workshop</p></div><div></div></div>
+                  <div class="list-row"><div class="row-icon">L</div><div><h4>Area / City</h4><p>Lahore</p></div><div></div></div>
+                </section>
+                <section class="card">
+                  <div class="list-row"><div class="row-icon">E</div><div><h4>Edit Profile</h4><p>Workshop and city details</p></div><div class="chevron">&rsaquo;</div></div>
+                  <div class="list-row"><div class="row-icon">G</div><div><h4>Language &amp; Theme</h4><p>English &middot; Light</p></div><div class="chevron">&rsaquo;</div></div>
+                  <div class="list-row"><div class="row-icon">S</div><div><h4>Contact SGX</h4><p>WhatsApp: 0300-8880000</p></div><div class="chevron">&rsaquo;</div></div>
+                </section>
+                <button class="logout">Logout</button>
+                <p class="version">SGX Partners &middot; v1.0.0</p>
+              </div>
+              <nav class="nav">
+                <div class="nav-item"><span class="nav-icon">H</span><span>Home</span></div>
+                <div class="nav-item"><span class="nav-icon">P</span><span>Products</span></div>
+                <div class="nav-item"><span class="scan">QR</span></div>
+                <div class="nav-item"><span class="nav-icon">A</span><span>Activity</span></div>
+                <div class="nav-item active"><span class="nav-icon">S</span><span>Settings</span></div>
+              </nav>
+            </div>
+          </div>
+          <p class="hint">Best if you want this screen to match Home and stay very direct.</p>
+        </article>
+
+        <article class="option">
+          <div class="option-title">
+            <h2>Option B: Collapsing Identity App Bar</h2>
+            <span>Recommended</span>
+          </div>
+          <div class="phone">
+            <div class="screen collapsible-screen" id="collapsible-screen">
+              <div class="status">
+                <span>1:18</span>
+                <span class="signals"><i class="dot"></i><i class="dot"></i><i class="battery"></i></span>
+              </div>
+              <header class="collapsing">
+                <div class="collapse-inner">
+                  <div class="expanded-id">
+                    <div class="avatar">MF</div>
+                    <div class="identity">
+                      <h3>Muhammad Farhan</h3>
+                      <p>Farhan Workshop &middot; Lahore</p>
+                      <p>0300-1234567</p>
+                    </div>
+                  </div>
+                  <div class="collapsed-id">
+                    <div class="avatar">MF</div>
+                    <div>
+                      <h3>Muhammad Farhan</h3>
+                      <p>Farhan Workshop &middot; Lahore</p>
+                    </div>
+                  </div>
+                </div>
+              </header>
+              <div class="content">
+                <section class="card">
+                  <div class="list-row"><div class="row-icon">P</div><div><h4>Verified Phone</h4><p>0300-1234567</p></div><div class="chevron">-</div></div>
+                  <div class="list-row"><div class="row-icon">W</div><div><h4>Workshop</h4><p>Farhan Workshop</p></div><div></div></div>
+                  <div class="list-row"><div class="row-icon">L</div><div><h4>Area / City</h4><p>Lahore</p></div><div></div></div>
+                </section>
+                <section class="card">
+                  <div class="list-row"><div class="row-icon">E</div><div><h4>Edit Profile</h4><p>Workshop and city details</p></div><div class="chevron">&rsaquo;</div></div>
+                  <div class="list-row"><div class="row-icon">G</div><div><h4>Language &amp; Theme</h4><p>English &middot; Light</p></div><div class="chevron">&rsaquo;</div></div>
+                  <div class="list-row"><div class="row-icon">S</div><div><h4>Contact SGX</h4><p>WhatsApp: 0300-8880000</p></div><div class="chevron">&rsaquo;</div></div>
+                </section>
+                <button class="logout">Logout</button>
+                <p class="version">SGX Partners &middot; v1.0.0</p>
+                <div class="spacer"></div>
+              </div>
+              <nav class="nav">
+                <div class="nav-item"><span class="nav-icon">H</span><span>Home</span></div>
+                <div class="nav-item"><span class="nav-icon">P</span><span>Products</span></div>
+                <div class="nav-item"><span class="scan">QR</span></div>
+                <div class="nav-item"><span class="nav-icon">A</span><span>Activity</span></div>
+                <div class="nav-item active"><span class="nav-icon">S</span><span>Settings</span></div>
+              </nav>
+            </div>
+          </div>
+          <p class="hint">Best if you want the identity to feel native: large at top, compact in the app bar after scroll.</p>
+        </article>
+
+        <article class="option">
+          <div class="option-title">
+            <h2>Option C: Compact Account Card</h2>
+            <span>Dense</span>
+          </div>
+          <div class="phone">
+            <div class="screen">
+              <div class="status">
+                <span>1:18</span>
+                <span class="signals"><i class="dot"></i><i class="dot"></i><i class="battery"></i></span>
+              </div>
+              <div class="toolbar-title"><h3>Settings</h3></div>
+              <div class="compact-header">
+                <div class="compact-card">
+                  <div class="avatar">MF</div>
+                  <div class="identity">
+                    <h3>Muhammad Farhan</h3>
+                    <p>Farhan Workshop &middot; Lahore</p>
+                    <p>0300-1234567</p>
+                  </div>
+                </div>
+              </div>
+              <div class="content">
+                <section class="card">
+                  <div class="list-row"><div class="row-icon">P</div><div><h4>Verified Phone</h4><p>0300-1234567</p></div><div class="chevron">-</div></div>
+                  <div class="list-row"><div class="row-icon">W</div><div><h4>Workshop</h4><p>Farhan Workshop</p></div><div></div></div>
+                  <div class="list-row"><div class="row-icon">L</div><div><h4>Area / City</h4><p>Lahore</p></div><div></div></div>
+                </section>
+                <section class="card">
+                  <div class="list-row"><div class="row-icon">E</div><div><h4>Edit Profile</h4><p>Workshop and city details</p></div><div class="chevron">&rsaquo;</div></div>
+                  <div class="list-row"><div class="row-icon">G</div><div><h4>Language &amp; Theme</h4><p>English &middot; Light</p></div><div class="chevron">&rsaquo;</div></div>
+                  <div class="list-row"><div class="row-icon">S</div><div><h4>Contact SGX</h4><p>WhatsApp: 0300-8880000</p></div><div class="chevron">&rsaquo;</div></div>
+                </section>
+                <button class="logout">Logout</button>
+                <p class="version">SGX Partners &middot; v1.0.0</p>
+              </div>
+              <nav class="nav">
+                <div class="nav-item"><span class="nav-icon">H</span><span>Home</span></div>
+                <div class="nav-item"><span class="nav-icon">P</span><span>Products</span></div>
+                <div class="nav-item"><span class="scan">QR</span></div>
+                <div class="nav-item"><span class="nav-icon">A</span><span>Activity</span></div>
+                <div class="nav-item active"><span class="nav-icon">S</span><span>Settings</span></div>
+              </nav>
+            </div>
+          </div>
+          <p class="hint">Best if you want a simple settings page but still keep a clear user account block.</p>
+        </article>
+      </section>
+    </main>
+
+    <script>
+      const screen = document.getElementById("collapsible-screen");
+      const update = () => {
+        screen.classList.toggle("scrolled", screen.scrollTop > 70);
+      };
+      screen.addEventListener("scroll", update, { passive: true });
+      update();
+    </script>
+  </body>
+</html>
