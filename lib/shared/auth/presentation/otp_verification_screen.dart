@@ -1,6 +1,9 @@
+import 'dart:async';
+
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
+import 'package:supabase_flutter/supabase_flutter.dart' show Supabase;
 
 import '../../../app/theme/app_colors.dart';
 import '../../../app/theme/app_spacing.dart';
@@ -9,6 +12,9 @@ import '../../../core/auth/auth_state.dart';
 import '../../../shared/models/app_role.dart';
 import '../../../shared/widgets/sgx_app_bar.dart';
 import '../../../shared/widgets/sgx_logo.dart';
+
+/// Resend cooldown, in seconds, before the user can request a new code.
+const _resendCooldownSeconds = 30;
 
 class OtpVerificationScreen extends ConsumerStatefulWidget {
   const OtpVerificationScreen({super.key});
@@ -19,15 +25,80 @@ class OtpVerificationScreen extends ConsumerStatefulWidget {
 }
 
 class _OtpVerificationScreenState extends ConsumerState<OtpVerificationScreen> {
-  final _controller = TextEditingController(text: '123456');
+  final _controller = TextEditingController();
   final _focusNode = FocusNode();
   String? _errorText;
+  Timer? _resendTimer;
+  int _secondsRemaining = _resendCooldownSeconds;
+
+  @override
+  void initState() {
+    super.initState();
+    _startResendCountdown();
+    _autofillDevOtp();
+  }
 
   @override
   void dispose() {
     _controller.dispose();
     _focusNode.dispose();
+    _resendTimer?.cancel();
     super.dispose();
+  }
+
+  void _startResendCountdown() {
+    _resendTimer?.cancel();
+    setState(() => _secondsRemaining = _resendCooldownSeconds);
+    _resendTimer = Timer.periodic(const Duration(seconds: 1), (timer) {
+      if (!mounted) {
+        timer.cancel();
+        return;
+      }
+      if (_secondsRemaining <= 1) {
+        timer.cancel();
+        setState(() => _secondsRemaining = 0);
+      } else {
+        setState(() => _secondsRemaining -= 1);
+      }
+    });
+  }
+
+  /// DEV ONLY: pulls the real OTP just captured by the Send SMS Hook
+  /// (see dev_get_latest_otp / dev_otp_log) so testing doesn't need a
+  /// manual DB lookup or a race against the expiry window. Remove this
+  /// once a real SMS provider is connected.
+  Future<void> _autofillDevOtp() async {
+    final phone = ref.read(authControllerProvider).phoneNumber;
+    if (phone == null) return;
+    // Small delay so the hook's insert has landed before we ask.
+    await Future<void>.delayed(const Duration(milliseconds: 900));
+    if (!mounted) return;
+    try {
+      final otp =
+          await Supabase.instance.client.rpc(
+                'dev_get_latest_otp',
+                params: {'p_phone': phone},
+              )
+              as String?;
+      if (otp != null && mounted) {
+        _controller.text = otp;
+      }
+    } catch (_) {
+      // Best-effort only — user can still type the code manually.
+    }
+  }
+
+  Future<void> _resend() async {
+    if (_secondsRemaining > 0) return;
+    final phone = ref.read(authControllerProvider).phoneNumber;
+    if (phone == null) return;
+    setState(() {
+      _errorText = null;
+      _controller.clear();
+    });
+    await ref.read(authControllerProvider.notifier).sendOtp(phone);
+    _startResendCountdown();
+    await _autofillDevOtp();
   }
 
   @override
@@ -141,13 +212,21 @@ class _OtpVerificationScreenState extends ConsumerState<OtpVerificationScreen> {
               ),
             ],
             const SizedBox(height: AppSpacing.lg),
-            Text(
-              'Resend code in 00:24',
-              textAlign: TextAlign.center,
-              style: Theme.of(
-                context,
-              ).textTheme.bodyMedium?.copyWith(color: AppColors.mutedText),
-            ),
+            if (_secondsRemaining > 0)
+              Text(
+                'Resend code in 00:${_secondsRemaining.toString().padLeft(2, '0')}',
+                textAlign: TextAlign.center,
+                style: Theme.of(
+                  context,
+                ).textTheme.bodyMedium?.copyWith(color: AppColors.mutedText),
+              )
+            else
+              Center(
+                child: TextButton(
+                  onPressed: isLoading ? null : _resend,
+                  child: const Text('Resend code'),
+                ),
+              ),
             const SizedBox(height: AppSpacing.xl),
             SizedBox(
               height: 48,
@@ -187,9 +266,18 @@ class _OtpVerificationScreenState extends ConsumerState<OtpVerificationScreen> {
     await ref.read(authControllerProvider.notifier).verifyOtp(otp);
     final auth = ref.read(authControllerProvider);
     if (!mounted) return;
+
     if (auth.status == AuthStatus.accountUnavailable) {
       context.go('/auth/account-unavailable');
-    } else if (auth.profile?.role == AppRole.wholesaler) {
+      return;
+    }
+    // Verification failed (wrong/expired code, network error, etc.) —
+    // status stays otpSent and auth.errorMessage is already shown above.
+    // A null profile here does NOT mean "new mechanic"; only a
+    // successful signedIn state carries a real routing decision.
+    if (auth.status != AuthStatus.signedIn) return;
+
+    if (auth.profile?.role == AppRole.wholesaler) {
       context.go('/wholesaler/home');
     } else if (auth.profile?.isComplete == false || auth.profile == null) {
       context.go('/mechanic/onboarding');

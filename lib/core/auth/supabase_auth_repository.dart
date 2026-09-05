@@ -76,8 +76,11 @@ class SupabaseAuthRepository implements AuthRepository {
     _ => AppRole.unknown,
   };
 
-  /// wholesalers/mechanics store local Pakistani numbers (03XXXXXXXXX),
-  /// but Supabase Auth needs E.164 to actually deliver the SMS.
+  /// Confirmed required, not optional: Supabase Auth rejects a bare
+  /// local number with "Invalid phone number format (E.164 required)"
+  /// once the provider/hook are properly configured. wholesalers/
+  /// mechanics still store local 03XXXXXXXXX; this conversion is only
+  /// for the wire call to Supabase Auth.
   String _toE164(String localNumber) {
     final digits = localNumber.replaceAll(RegExp(r'[^0-9]'), '');
     final national = digits.startsWith('0') ? digits.substring(1) : digits;

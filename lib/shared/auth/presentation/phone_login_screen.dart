@@ -32,22 +32,29 @@ class _PhoneLoginScreenState extends ConsumerState<PhoneLoginScreen> {
     final isLoading =
         ref.watch(authControllerProvider).status == AuthStatus.checking;
 
-    return Scaffold(
-      body: SafeArea(
-        child: LayoutBuilder(
-          builder: (context, constraints) {
-            return SingleChildScrollView(
-              padding: const EdgeInsets.all(AppSpacing.lg),
-              child: ConstrainedBox(
-                constraints: BoxConstraints(
-                  minHeight: constraints.maxHeight - AppSpacing.lg * 2,
+    // No AppBar on this screen to auto-derive the status bar style, and
+    // the splash screen before it forces light (white) icons for its red
+    // background — without this, that white style leaks into this
+    // light-background screen and the icons become invisible.
+    return AnnotatedRegion<SystemUiOverlayStyle>(
+      value: SystemUiOverlayStyle.dark,
+      child: Scaffold(
+        body: SafeArea(
+          child: LayoutBuilder(
+            builder: (context, constraints) {
+              return SingleChildScrollView(
+                padding: const EdgeInsets.all(AppSpacing.lg),
+                child: ConstrainedBox(
+                  constraints: BoxConstraints(
+                    minHeight: constraints.maxHeight - AppSpacing.lg * 2,
+                  ),
+                  child: IntrinsicHeight(
+                    child: _buildContent(context, isLoading),
+                  ),
                 ),
-                child: IntrinsicHeight(
-                  child: _buildContent(context, isLoading),
-                ),
-              ),
-            );
-          },
+              );
+            },
+          ),
         ),
       ),
     );

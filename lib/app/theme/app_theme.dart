@@ -19,7 +19,7 @@ class AppTheme {
       onError: Colors.white,
     );
 
-    return _theme(scheme).copyWith(
+    return _theme(scheme, AppColors.background).copyWith(
       scaffoldBackgroundColor: AppColors.background,
       textTheme: AppTypography.build(AppColors.text),
     );
@@ -41,17 +41,24 @@ class AppTheme {
       onError: Colors.white,
     );
 
-    return _theme(scheme).copyWith(
+    return _theme(scheme, AppColors.darkBackground).copyWith(
       scaffoldBackgroundColor: AppColors.darkBackground,
       textTheme: AppTypography.build(AppColors.darkText),
     );
   }
 
-  static ThemeData _theme(ColorScheme scheme) {
+  static ThemeData _theme(ColorScheme scheme, Color background) {
     return ThemeData(
       useMaterial3: true,
       colorScheme: scheme,
-      appBarTheme: const AppBarTheme(centerTitle: false),
+      // Match the scaffold so the app bar and body read as one
+      // continuous surface instead of a visible seam at the toolbar.
+      appBarTheme: AppBarTheme(
+        centerTitle: false,
+        backgroundColor: background,
+        surfaceTintColor: Colors.transparent,
+        elevation: 0,
+      ),
       cardTheme: const CardThemeData(
         elevation: 0,
         shape: RoundedRectangleBorder(
