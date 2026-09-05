@@ -1,16 +1,43 @@
 import 'package:flutter/material.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 
 import '../../../../app/theme/app_colors.dart';
 import '../../../../app/theme/app_spacing.dart';
+import '../../../../core/auth/auth_controller.dart';
+import '../../../../shared/constants/kpk_areas.dart';
 import '../../../../shared/widgets/sgx_logo.dart';
 import '../../../../shared/widgets/sgx_screen.dart';
+import '../data/supabase_mechanic_onboarding_repository.dart';
+import '../domain/mechanic_onboarding_draft.dart';
 
-class CompleteMechanicProfileScreen extends StatelessWidget {
+class CompleteMechanicProfileScreen extends ConsumerStatefulWidget {
   const CompleteMechanicProfileScreen({super.key});
 
   @override
+  ConsumerState<CompleteMechanicProfileScreen> createState() =>
+      _CompleteMechanicProfileScreenState();
+}
+
+class _CompleteMechanicProfileScreenState
+    extends ConsumerState<CompleteMechanicProfileScreen> {
+  final _fullNameController = TextEditingController();
+  final _workshopNameController = TextEditingController();
+  String? _area;
+  bool _isSubmitting = false;
+  String? _errorText;
+
+  @override
+  void dispose() {
+    _fullNameController.dispose();
+    _workshopNameController.dispose();
+    super.dispose();
+  }
+
+  @override
   Widget build(BuildContext context) {
+    final phoneNumber = ref.watch(authControllerProvider).phoneNumber;
+
     return SgxScreen(
       title: 'Complete your profile',
       showBack: true,
@@ -31,32 +58,42 @@ class CompleteMechanicProfileScreen extends StatelessWidget {
           child: ListTile(
             leading: const Icon(Icons.verified, color: AppColors.success),
             title: const Text('Verified phone'),
-            subtitle: const Text('0300-1234567'),
+            subtitle: Text(phoneNumber ?? '—'),
             trailing: const Icon(Icons.lock_outline),
           ),
         ),
         const SizedBox(height: AppSpacing.md),
-        const TextField(
-          decoration: InputDecoration(
+        TextField(
+          controller: _fullNameController,
+          decoration: const InputDecoration(
             labelText: 'Full Name *',
             prefixIcon: Icon(Icons.person_outline),
           ),
         ),
         const SizedBox(height: AppSpacing.sm),
-        const TextField(
-          decoration: InputDecoration(
+        TextField(
+          controller: _workshopNameController,
+          decoration: const InputDecoration(
             labelText: 'Workshop / Shop Name (optional)',
             prefixIcon: Icon(Icons.storefront_outlined),
           ),
         ),
         const SizedBox(height: AppSpacing.sm),
-        const TextField(
-          decoration: InputDecoration(
+        DropdownButtonFormField<String>(
+          initialValue: _area,
+          decoration: const InputDecoration(
             labelText: 'Area / City *',
             prefixIcon: Icon(Icons.location_on_outlined),
-            suffixIcon: Icon(Icons.expand_more),
           ),
+          items: kKpkAreas
+              .map((area) => DropdownMenuItem(value: area, child: Text(area)))
+              .toList(),
+          onChanged: (value) => setState(() => _area = value),
         ),
+        if (_errorText != null) ...[
+          const SizedBox(height: AppSpacing.sm),
+          Text(_errorText!, style: const TextStyle(color: AppColors.error)),
+        ],
         const SizedBox(height: AppSpacing.md),
         Card(
           color: AppColors.surfaceContainer,
@@ -77,11 +114,56 @@ class CompleteMechanicProfileScreen extends StatelessWidget {
         ),
         const SizedBox(height: AppSpacing.md),
         FilledButton.icon(
-          onPressed: () => context.go('/mechanic/home'),
-          icon: const Icon(Icons.arrow_forward),
+          onPressed: _isSubmitting ? null : _submit,
+          icon: _isSubmitting
+              ? const SizedBox.square(
+                  dimension: 18,
+                  child: CircularProgressIndicator(
+                    strokeWidth: 2,
+                    color: Colors.white,
+                  ),
+                )
+              : const Icon(Icons.arrow_forward),
           label: const Text('Continue'),
         ),
       ],
     );
+  }
+
+  Future<void> _submit() async {
+    final fullName = _fullNameController.text.trim();
+    if (fullName.length < 2) {
+      setState(() => _errorText = 'Enter your full name.');
+      return;
+    }
+    if (_area == null) {
+      setState(() => _errorText = 'Select your area / city.');
+      return;
+    }
+
+    setState(() {
+      _isSubmitting = true;
+      _errorText = null;
+    });
+
+    try {
+      await ref
+          .read(mechanicOnboardingRepositoryProvider)
+          .completeProfile(
+            MechanicOnboardingDraft(
+              fullName: fullName,
+              workshopName: _workshopNameController.text.trim(),
+              city: _area!,
+            ),
+          );
+      if (!mounted) return;
+      context.go('/mechanic/home');
+    } catch (error) {
+      if (!mounted) return;
+      setState(() {
+        _isSubmitting = false;
+        _errorText = 'Could not save your profile. Please try again.';
+      });
+    }
   }
 }

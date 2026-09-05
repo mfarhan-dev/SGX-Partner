@@ -1,7 +1,9 @@
 import '../../shared/models/profile_summary.dart';
 
 abstract interface class AuthRepository {
-  Future<void> restoreSession();
+  /// Checks for an existing signed-in session (e.g. on app relaunch) and
+  /// returns the associated profile, or `null` if there is none.
+  Future<ProfileSummary?> restoreSession();
 
   Future<void> sendOtp(String phoneNumber);
 
@@ -11,4 +13,10 @@ abstract interface class AuthRepository {
   });
 
   Future<void> signOut();
+}
+
+class AuthException implements Exception {
+  const AuthException(this.message);
+
+  final String message;
 }

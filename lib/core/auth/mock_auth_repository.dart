@@ -6,8 +6,9 @@ class MockAuthRepository implements AuthRepository {
   const MockAuthRepository();
 
   @override
-  Future<void> restoreSession() async {
+  Future<ProfileSummary?> restoreSession() async {
     await Future<void>.delayed(const Duration(milliseconds: 250));
+    return null;
   }
 
   @override
@@ -48,10 +49,4 @@ class MockAuthRepository implements AuthRepository {
 
   @override
   Future<void> signOut() async {}
-}
-
-class AuthException implements Exception {
-  const AuthException(this.message);
-
-  final String message;
 }

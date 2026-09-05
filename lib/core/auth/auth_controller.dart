@@ -1,11 +1,15 @@
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+// `AuthState`/`AuthException` collide with our own classes of the same
+// name below; only `Supabase` is needed from this import.
+import 'package:supabase_flutter/supabase_flutter.dart' show Supabase;
 
+import '../../shared/models/profile_summary.dart';
 import 'auth_repository.dart';
 import 'auth_state.dart';
-import 'mock_auth_repository.dart';
+import 'supabase_auth_repository.dart';
 
 final authRepositoryProvider = Provider<AuthRepository>(
-  (ref) => const MockAuthRepository(),
+  (ref) => SupabaseAuthRepository(Supabase.instance.client),
 );
 
 final authControllerProvider = NotifierProvider<AuthController, AuthState>(
@@ -18,14 +22,26 @@ class AuthController extends Notifier<AuthState> {
 
   Future<void> restoreSession() async {
     state = const AuthState.checking();
-    await ref.read(authRepositoryProvider).restoreSession();
-    state = const AuthState.signedOut();
+    final profile = await ref.read(authRepositoryProvider).restoreSession();
+    if (profile == null) {
+      state = const AuthState.signedOut();
+      return;
+    }
+    state = _stateForProfile(profile, phoneNumber: profile.phoneNumber);
   }
 
   Future<void> sendOtp(String phoneNumber) async {
     state = AuthState(status: AuthStatus.checking, phoneNumber: phoneNumber);
-    await ref.read(authRepositoryProvider).sendOtp(phoneNumber);
-    state = AuthState(status: AuthStatus.otpSent, phoneNumber: phoneNumber);
+    try {
+      await ref.read(authRepositoryProvider).sendOtp(phoneNumber);
+      state = AuthState(status: AuthStatus.otpSent, phoneNumber: phoneNumber);
+    } on AuthException catch (error) {
+      state = AuthState(
+        status: AuthStatus.signedOut,
+        phoneNumber: phoneNumber,
+        errorMessage: error.message,
+      );
+    }
   }
 
   Future<void> verifyOtp(String otp) async {
@@ -38,29 +54,7 @@ class AuthController extends Notifier<AuthState> {
           .read(authRepositoryProvider)
           .verifyOtp(phoneNumber: phoneNumber, otp: otp);
 
-      if (profile == null) {
-        state = AuthState(
-          status: AuthStatus.signedIn,
-          phoneNumber: phoneNumber,
-          profile: null,
-        );
-        return;
-      }
-
-      if (!profile.isActive || !profile.role.isPartner) {
-        state = AuthState(
-          status: AuthStatus.accountUnavailable,
-          phoneNumber: phoneNumber,
-          profile: profile,
-        );
-        return;
-      }
-
-      state = AuthState(
-        status: AuthStatus.signedIn,
-        phoneNumber: phoneNumber,
-        profile: profile,
-      );
+      state = _stateForProfile(profile, phoneNumber: phoneNumber);
     } on AuthException catch (error) {
       state = AuthState(
         status: AuthStatus.otpSent,
@@ -73,5 +67,32 @@ class AuthController extends Notifier<AuthState> {
   Future<void> signOut() async {
     await ref.read(authRepositoryProvider).signOut();
     state = const AuthState.signedOut();
+  }
+
+  AuthState _stateForProfile(
+    ProfileSummary? profile, {
+    required String? phoneNumber,
+  }) {
+    if (profile == null) {
+      return AuthState(
+        status: AuthStatus.signedIn,
+        phoneNumber: phoneNumber,
+        profile: null,
+      );
+    }
+
+    if (!profile.isActive || !profile.role.isPartner) {
+      return AuthState(
+        status: AuthStatus.accountUnavailable,
+        phoneNumber: phoneNumber,
+        profile: profile,
+      );
+    }
+
+    return AuthState(
+      status: AuthStatus.signedIn,
+      phoneNumber: phoneNumber,
+      profile: profile,
+    );
   }
 }

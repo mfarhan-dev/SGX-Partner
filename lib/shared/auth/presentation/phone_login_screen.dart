@@ -199,6 +199,15 @@ class _PhoneLoginScreenState extends ConsumerState<PhoneLoginScreen> {
 
     setState(() => _errorText = null);
     await ref.read(authControllerProvider.notifier).sendOtp(phone);
-    if (mounted) context.go('/auth/otp');
+    if (!mounted) return;
+
+    final auth = ref.read(authControllerProvider);
+    if (auth.status == AuthStatus.otpSent) {
+      context.go('/auth/otp');
+    } else {
+      setState(
+        () => _errorText = auth.errorMessage ?? 'Could not send the code.',
+      );
+    }
   }
 }
