@@ -11,8 +11,12 @@ class AppTheme {
       seedColor: AppColors.primary,
       brightness: Brightness.light,
       primary: AppColors.primary,
+      onPrimary: Colors.white,
+      tertiary: AppColors.gold,
+      onTertiary: AppColors.text,
       surface: AppColors.surface,
       error: AppColors.error,
+      onError: Colors.white,
     );
 
     return _theme(scheme).copyWith(
@@ -25,10 +29,22 @@ class AppTheme {
     final scheme = ColorScheme.fromSeed(
       seedColor: AppColors.primary,
       brightness: Brightness.dark,
+      primary: AppColors.primary,
+      onPrimary: Colors.white,
+      tertiary: AppColors.gold,
+      onTertiary: AppColors.text,
+      surface: AppColors.darkSurface,
+      onSurface: AppColors.darkText,
+      surfaceContainerHighest: AppColors.darkSurfaceContainer,
+      outline: AppColors.darkOutline,
       error: AppColors.error,
+      onError: Colors.white,
     );
 
-    return _theme(scheme);
+    return _theme(scheme).copyWith(
+      scaffoldBackgroundColor: AppColors.darkBackground,
+      textTheme: AppTypography.build(AppColors.darkText),
+    );
   }
 
   static ThemeData _theme(ColorScheme scheme) {

@@ -43,6 +43,10 @@ class _PhoneLoginScreenState extends ConsumerState<PhoneLoginScreen> {
                 style: OutlinedButton.styleFrom(
                   minimumSize: const Size(0, 36),
                   padding: const EdgeInsets.symmetric(horizontal: 14),
+                  foregroundColor: Theme.of(context).colorScheme.onSurface,
+                  side: BorderSide(
+                    color: Theme.of(context).colorScheme.outline,
+                  ),
                 ),
                 onPressed: () {},
                 icon: const Icon(Icons.language, size: 18),
