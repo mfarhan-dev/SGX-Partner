@@ -1,60 +1,59 @@
 import 'package:flutter/material.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 
-import '../../../../app/theme/app_spacing.dart';
 import '../../../../shared/widgets/sgx_screen.dart';
+import '../data/mechanic_profile_providers.dart';
+import '../data/mechanic_profile_update_repository.dart';
+import 'mechanic_profile_form.dart';
 
-class EditMechanicProfileScreen extends StatelessWidget {
+/// Same fields as onboarding (MechanicProfileForm), prefilled with the
+/// mechanic's current data, saving via update_mechanic_profile() instead
+/// of the onboarding create path.
+class EditMechanicProfileScreen extends ConsumerWidget {
   const EditMechanicProfileScreen({super.key});
 
   @override
-  Widget build(BuildContext context) {
+  Widget build(BuildContext context, WidgetRef ref) {
+    final profileAsync = ref.watch(mechanicProfileDataProvider);
+
     return SgxScreen(
       title: 'Edit Profile',
       showBack: true,
       showNotifications: false,
       children: [
-        const Center(child: CircleAvatar(radius: 48, child: Text('MF'))),
-        const SizedBox(height: AppSpacing.lg),
-        const TextField(
-          enabled: false,
-          decoration: InputDecoration(
-            labelText: 'Verified Phone',
-            prefixIcon: Icon(Icons.check_circle_outline),
-            suffixIcon: Icon(Icons.lock_outline),
+        profileAsync.when(
+          data: (profile) => MechanicProfileForm(
+            phoneNumber: profile.phone,
+            submitLabel: 'Update',
+            submitIcon: Icons.check,
+            initialFullName: profile.fullName,
+            initialCnic: profile.cnic,
+            initialWorkshopName: profile.workshopName,
+            initialArea: profile.area,
+            initialAddress: profile.address,
+            initialPhotoUrl: profile.photoUrl,
+            onSubmit: (result) async {
+              await ref
+                  .read(mechanicProfileUpdateRepositoryProvider)
+                  .updateProfile(result);
+              // Refetch on next visit instead of showing stale cached
+              // data -- this is the "whenever they've changed the
+              // profile, fetch that time" invalidation point.
+              ref.invalidate(mechanicProfileDataProvider);
+              if (context.mounted) context.go('/mechanic/profile');
+            },
           ),
-        ),
-        const SizedBox(height: AppSpacing.sm),
-        const TextField(decoration: InputDecoration(labelText: 'Full Name *')),
-        const SizedBox(height: AppSpacing.sm),
-        const TextField(
-          decoration: InputDecoration(
-            labelText: 'Workshop / Shop Name (optional)',
-            helperText: 'Optional — helps customers recognize your shop.',
+          loading: () => const Padding(
+            padding: EdgeInsets.symmetric(vertical: 48),
+            child: Center(child: CircularProgressIndicator()),
           ),
-        ),
-        const SizedBox(height: AppSpacing.sm),
-        const TextField(
-          decoration: InputDecoration(labelText: 'Area / City *'),
-        ),
-        const SizedBox(height: AppSpacing.lg),
-        Row(
-          children: [
-            Expanded(
-              child: OutlinedButton(
-                onPressed: () => context.pop(),
-                child: const Text('Cancel'),
-              ),
+          error: (error, stackTrace) => const Padding(
+            padding: EdgeInsets.symmetric(vertical: 48),
+            child: Center(
+              child: Text('Could not load your profile. Please try again.'),
             ),
-            const SizedBox(width: AppSpacing.sm),
-            Expanded(
-              child: FilledButton.icon(
-                onPressed: () => context.go('/mechanic/profile'),
-                icon: const Icon(Icons.check),
-                label: const Text('Save'),
-              ),
-            ),
-          ],
+          ),
         ),
       ],
     );
