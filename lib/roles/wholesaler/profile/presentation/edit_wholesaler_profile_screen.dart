@@ -6,26 +6,28 @@ import 'package:supabase_flutter/supabase_flutter.dart';
 import '../../../../core/utils/phone_formatter.dart';
 import '../../../../shared/widgets/phone_change_otp_sheet.dart';
 import '../../../../shared/widgets/sgx_screen.dart';
-import '../data/mechanic_profile_providers.dart';
-import '../data/mechanic_profile_update_repository.dart';
-import 'mechanic_profile_form.dart';
+import '../data/wholesaler_profile_providers.dart';
+import '../data/wholesaler_profile_update_repository.dart';
+import 'wholesaler_profile_form.dart';
 
-/// Same fields as onboarding (MechanicProfileForm), prefilled with the
-/// mechanic's current data, saving via update_mechanic_profile() instead
-/// of the onboarding create path.
+/// Mirrors edit_mechanic_profile_screen.dart -- prefilled with the
+/// wholesaler's current data, saving via update_wholesaler_profile()
+/// instead of the mechanic RPC. There is no wholesaler onboarding
+/// screen (see WholesalerProfileForm's doc comment): staff always
+/// create a complete wholesaler record first, so this Edit screen is
+/// the only place a wholesaler ever fills in this form.
 ///
-/// Unlike onboarding, the mobile number is editable here. Changing a
-/// phone number is a real identity change, not just another profile
-/// field, so it goes through Supabase Auth's own phone-change flow
-/// (a fresh OTP to the NEW number) before update_mechanic_profile()
-/// ever runs -- that RPC always syncs mechanics.phone FROM the
-/// verified auth.users.phone, never from anything the client typed.
-class EditMechanicProfileScreen extends ConsumerWidget {
-  const EditMechanicProfileScreen({super.key});
+/// Same phone-change handling as mechanic: a new number goes through
+/// Supabase Auth's phone-change flow (a fresh OTP to the NEW number)
+/// before update_wholesaler_profile() ever runs -- that RPC always
+/// syncs wholesalers.phone FROM the verified auth.users.phone, never
+/// from anything the client typed.
+class EditWholesalerProfileScreen extends ConsumerWidget {
+  const EditWholesalerProfileScreen({super.key});
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
-    final profileAsync = ref.watch(mechanicProfileDataProvider);
+    final profileAsync = ref.watch(wholesalerProfileDataProvider);
 
     return SgxScreen(
       title: 'Edit Profile',
@@ -33,14 +35,14 @@ class EditMechanicProfileScreen extends ConsumerWidget {
       showNotifications: false,
       children: [
         profileAsync.when(
-          data: (profile) => MechanicProfileForm(
+          data: (profile) => WholesalerProfileForm(
             phoneNumber: profile.phone,
             allowPhoneEdit: true,
             submitLabel: 'Update',
             submitIcon: Icons.check,
-            initialFullName: profile.fullName,
+            initialOwnerName: profile.ownerName,
             initialCnic: profile.cnic,
-            initialWorkshopName: profile.workshopName,
+            initialShopName: profile.shopName,
             initialArea: profile.area,
             initialAddress: profile.address,
             initialPhotoUrl: profile.photoUrl,
@@ -53,13 +55,13 @@ class EditMechanicProfileScreen extends ConsumerWidget {
               }
 
               await ref
-                  .read(mechanicProfileUpdateRepositoryProvider)
+                  .read(wholesalerProfileUpdateRepositoryProvider)
                   .updateProfile(result);
               // Refetch on next visit instead of showing stale cached
               // data -- this is the "whenever they've changed the
               // profile, fetch that time" invalidation point.
-              ref.invalidate(mechanicProfileDataProvider);
-              if (context.mounted) context.go('/mechanic/profile');
+              ref.invalidate(wholesalerProfileDataProvider);
+              if (context.mounted) context.go('/wholesaler/profile');
             },
           ),
           loading: () => const Padding(
@@ -79,7 +81,7 @@ class EditMechanicProfileScreen extends ConsumerWidget {
 
   /// Sends a phone-change OTP to [newLocalNumber] and loops the entry
   /// sheet until the user confirms the right code or cancels. Throws
-  /// MechanicProfileFormCancelled on cancel, so the form treats it as
+  /// WholesalerProfileFormCancelled on cancel, so the form treats it as
   /// "user chose not to continue" rather than a real error.
   Future<void> _verifyPhoneChange(
     BuildContext context,
@@ -92,14 +94,14 @@ class EditMechanicProfileScreen extends ConsumerWidget {
 
     String? errorText;
     while (true) {
-      if (!context.mounted) throw const MechanicProfileFormCancelled();
+      if (!context.mounted) throw const WholesalerProfileFormCancelled();
       final code = await showPhoneChangeOtpSheet(
         context: context,
         newPhoneNumber: newLocalNumber,
         errorText: errorText,
       );
       if (code == null) {
-        throw const MechanicProfileFormCancelled();
+        throw const WholesalerProfileFormCancelled();
       }
 
       try {

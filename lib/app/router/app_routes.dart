@@ -11,6 +11,7 @@ import '../../roles/mechanic/withdrawals/presentation/mechanic_withdraw_money_sc
 import '../../roles/mechanic/withdrawals/presentation/mechanic_withdrawal_detail_screen.dart';
 import '../../roles/mechanic/withdrawals/presentation/mechanic_withdrawals_screen.dart';
 import '../../roles/wholesaler/home/presentation/wholesaler_home_screen.dart';
+import '../../roles/wholesaler/profile/presentation/edit_wholesaler_profile_screen.dart';
 import '../../roles/wholesaler/profile/presentation/wholesaler_profile_screen.dart';
 import '../../roles/wholesaler/qr_progress/presentation/qr_progress_screen.dart';
 import '../../roles/wholesaler/wallet/presentation/wholesaler_wallet_screen.dart';
@@ -62,6 +63,11 @@ class AppRoutes {
       GoRoute(
         path: '/mechanic/profile/edit',
         builder: (_, __) => const EditMechanicProfileScreen(),
+      ),
+      // Same reasoning: focused edit task, own back button, not a tab.
+      GoRoute(
+        path: '/wholesaler/profile/edit',
+        builder: (_, __) => const EditWholesalerProfileScreen(),
       ),
       ShellRoute(
         builder: (_, __, child) => SgxPartnersShell(child: child),
