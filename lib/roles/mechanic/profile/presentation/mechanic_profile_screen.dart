@@ -74,11 +74,20 @@ class MechanicProfileScreen extends ConsumerWidget {
           children: [
             ListTile(
               leading: const Icon(Icons.language),
-              title: const Text('Language & Theme'),
-              subtitle: const Text('English · Light'),
+              title: const Text('Language'),
+              subtitle: const Text('English'),
               trailing: const Icon(Icons.chevron_right),
               onTap: () => context.go('/profile/preferences'),
             ),
+            const Divider(height: 1),
+            ListTile(
+              leading: const Icon(Icons.dark_mode_outlined),
+              title: const Text('Theme'),
+              subtitle: const Text('Light'),
+              trailing: const Icon(Icons.chevron_right),
+              onTap: () => context.go('/profile/preferences'),
+            ),
+            const Divider(height: 1),
             ListTile(
               leading: const Icon(Icons.support_agent),
               title: const Text('Contact SGX'),
