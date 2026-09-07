@@ -73,12 +73,6 @@ class MechanicProfileScreen extends ConsumerWidget {
         _SettingsCard(
           children: [
             ListTile(
-              leading: const Icon(Icons.edit_outlined),
-              title: const Text('Edit Profile'),
-              trailing: const Icon(Icons.chevron_right),
-              onTap: () => context.go('/mechanic/profile/edit'),
-            ),
-            ListTile(
               leading: const Icon(Icons.language),
               title: const Text('Language & Theme'),
               subtitle: const Text('English · Light'),
@@ -222,6 +216,15 @@ class _ProfileHeader extends StatelessWidget {
                 ),
               ],
             ),
+          ),
+          // Replaces the old "Edit Profile" row further down the
+          // page — the edit action now lives right on the identity
+          // it edits, not buried in a settings list.
+          IconButton(
+            tooltip: 'Edit profile',
+            onPressed: () => context.go('/mechanic/profile/edit'),
+            icon: const Icon(Icons.edit_outlined, color: Colors.white),
+            style: IconButton.styleFrom(backgroundColor: Colors.white24),
           ),
         ],
       ),

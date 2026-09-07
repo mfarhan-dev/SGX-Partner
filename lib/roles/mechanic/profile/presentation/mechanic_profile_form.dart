@@ -1,13 +1,16 @@
 import 'dart:io';
 
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:geolocator/geolocator.dart';
 import 'package:image_picker/image_picker.dart';
-import 'package:supabase_flutter/supabase_flutter.dart' show PostgrestException;
+import 'package:supabase_flutter/supabase_flutter.dart'
+    show AuthException, PostgrestException;
 
 import '../../../../app/theme/app_colors.dart';
 import '../../../../app/theme/app_spacing.dart';
 import '../../../../core/utils/cnic_formatter.dart';
+import '../../../../core/utils/phone_formatter.dart';
 import '../../../../shared/constants/kpk_areas.dart';
 import '../../../../shared/widgets/searchable_list_sheet.dart';
 
@@ -30,6 +33,7 @@ class MechanicProfileFormResult {
     required this.fullName,
     required this.area,
     required this.workshopName,
+    this.phone,
     this.cnic,
     this.address,
     this.latitude,
@@ -40,6 +44,13 @@ class MechanicProfileFormResult {
   final String fullName;
   final String area;
   final String workshopName;
+
+  /// Only set when the form allows editing the phone (Edit Profile,
+  /// not onboarding) — the local 03XXXXXXXXX the user typed, which may
+  /// or may not differ from what they started with. The caller decides
+  /// what to do if it changed (trigger a phone-change OTP).
+  final String? phone;
+
   final String? cnic;
   final String? address;
   final double? latitude;
@@ -62,6 +73,7 @@ class MechanicProfileForm extends StatefulWidget {
     required this.submitLabel,
     required this.submitIcon,
     required this.onSubmit,
+    this.allowPhoneEdit = false,
     this.initialFullName,
     this.initialCnic,
     this.initialWorkshopName,
@@ -76,6 +88,12 @@ class MechanicProfileForm extends StatefulWidget {
   final String submitLabel;
   final IconData submitIcon;
   final Future<void> Function(MechanicProfileFormResult result) onSubmit;
+
+  /// Onboarding shows the just-verified phone as a locked field — it
+  /// IS the identity that was just verified, nothing to change. Edit
+  /// Profile allows changing it, which the caller must follow up with
+  /// a phone-change OTP before the new number actually takes effect.
+  final bool allowPhoneEdit;
 
   final String? initialFullName;
   final String? initialCnic;
@@ -97,6 +115,7 @@ class _MechanicProfileFormState extends State<MechanicProfileForm> {
   late final _fullNameController = TextEditingController(
     text: widget.initialFullName,
   );
+  late final _phoneController = TextEditingController(text: widget.phoneNumber);
   late final _workshopNameController = TextEditingController(
     text: widget.initialWorkshopName,
   );
@@ -115,6 +134,7 @@ class _MechanicProfileFormState extends State<MechanicProfileForm> {
   // — a single shared error message rendered in one fixed spot on the
   // page leaves the user guessing which field it was even about.
   String? _fullNameError;
+  String? _phoneError;
   String? _workshopNameError;
   String? _areaError;
   String? _cnicError;
@@ -126,6 +146,7 @@ class _MechanicProfileFormState extends State<MechanicProfileForm> {
   @override
   void dispose() {
     _fullNameController.dispose();
+    _phoneController.dispose();
     _workshopNameController.dispose();
     _addressController.dispose();
     _cnicController.dispose();
@@ -139,28 +160,53 @@ class _MechanicProfileFormState extends State<MechanicProfileForm> {
       children: [
         Center(child: _buildPhotoPicker(context)),
         const SizedBox(height: AppSpacing.xl),
-        Card(
-          color: AppColors.successContainer,
-          child: ListTile(
-            leading: const Icon(Icons.verified, color: AppColors.success),
-            title: const Text(
-              'Verified phone',
-              style: TextStyle(
-                color: AppColors.text,
-                fontWeight: FontWeight.w600,
-              ),
-            ),
-            subtitle: Text(
-              widget.phoneNumber ?? '—',
-              style: const TextStyle(color: AppColors.mutedText),
-            ),
-            trailing: const Icon(
-              Icons.lock_outline,
-              color: AppColors.mutedText,
+        if (widget.allowPhoneEdit) ...[
+          TextField(
+            controller: _phoneController,
+            keyboardType: TextInputType.phone,
+            maxLength: 11,
+            inputFormatters: [
+              FilteringTextInputFormatter.digitsOnly,
+              LengthLimitingTextInputFormatter(11),
+            ],
+            onChanged: (_) {
+              if (_phoneError != null) {
+                setState(() => _phoneError = null);
+              }
+            },
+            decoration: InputDecoration(
+              labelText: 'Mobile Number *',
+              prefixIcon: const Icon(Icons.smartphone),
+              counterText: '',
+              errorText: _phoneError,
+              helperText: 'Changing this sends a code to the new number.',
             ),
           ),
-        ),
-        const SizedBox(height: AppSpacing.md),
+          const SizedBox(height: AppSpacing.md),
+        ] else ...[
+          Card(
+            color: AppColors.successContainer,
+            child: ListTile(
+              leading: const Icon(Icons.verified, color: AppColors.success),
+              title: const Text(
+                'Verified phone',
+                style: TextStyle(
+                  color: AppColors.text,
+                  fontWeight: FontWeight.w600,
+                ),
+              ),
+              subtitle: Text(
+                widget.phoneNumber ?? '—',
+                style: const TextStyle(color: AppColors.mutedText),
+              ),
+              trailing: const Icon(
+                Icons.lock_outline,
+                color: AppColors.mutedText,
+              ),
+            ),
+          ),
+          const SizedBox(height: AppSpacing.md),
+        ],
         TextField(
           controller: _fullNameController,
           onChanged: (_) {
@@ -554,11 +600,16 @@ class _MechanicProfileFormState extends State<MechanicProfileForm> {
     FocusManager.instance.primaryFocus?.unfocus();
 
     final fullName = _fullNameController.text.trim();
+    final phone = _phoneController.text.trim();
     final workshopName = _workshopNameController.text.trim();
     final cnic = _cnicController.text.trim();
 
     setState(() {
       _fullNameError = fullName.length < 2 ? 'Enter your full name.' : null;
+      _phoneError =
+          widget.allowPhoneEdit && !PhoneFormatter.isValidPakistanMobile(phone)
+          ? 'Enter a valid phone number.'
+          : null;
       _workshopNameError = workshopName.length < 2
           ? 'Enter your workshop / shop name.'
           : null;
@@ -569,6 +620,7 @@ class _MechanicProfileFormState extends State<MechanicProfileForm> {
     });
 
     if (_fullNameError != null ||
+        _phoneError != null ||
         _workshopNameError != null ||
         _areaError != null ||
         _cnicError != null) {
@@ -586,6 +638,7 @@ class _MechanicProfileFormState extends State<MechanicProfileForm> {
           fullName: fullName,
           area: _area!,
           workshopName: workshopName,
+          phone: widget.allowPhoneEdit ? phone : null,
           cnic: cnic.isEmpty ? null : cnic,
           address: _addressController.text.trim().isEmpty
               ? null
@@ -597,6 +650,13 @@ class _MechanicProfileFormState extends State<MechanicProfileForm> {
       );
     } catch (error) {
       if (!mounted) return;
+      // A deliberate cancel (e.g. backing out of a phone-change OTP
+      // step) isn't a failure — just re-enable the button, no scary
+      // red text for something the user chose to do.
+      if (error is MechanicProfileFormCancelled) {
+        setState(() => _isSubmitting = false);
+        return;
+      }
       setState(() {
         _isSubmitting = false;
         _submitError = _messageFor(error);
@@ -611,6 +671,20 @@ class _MechanicProfileFormState extends State<MechanicProfileForm> {
             error.details.toString().contains('cnic'))) {
       return 'This CNIC is already registered to another account.';
     }
+    // Supabase's own Auth error text (e.g. phone-change failures like
+    // "already registered") is already written for end users — surface
+    // it directly instead of a generic message that would hide why a
+    // phone-number change specifically failed.
+    if (error is AuthException) {
+      return error.message;
+    }
     return 'Could not save your profile. Please try again.';
   }
+}
+
+/// Thrown by an onSubmit callback (e.g. Edit Profile, when the user
+/// backs out of a phone-change OTP prompt) to signal "the user chose
+/// not to continue" rather than a real failure.
+class MechanicProfileFormCancelled implements Exception {
+  const MechanicProfileFormCancelled();
 }
