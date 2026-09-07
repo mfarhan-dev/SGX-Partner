@@ -22,12 +22,23 @@ class AuthController extends Notifier<AuthState> {
 
   Future<void> restoreSession() async {
     state = const AuthState.checking();
-    final profile = await ref.read(authRepositoryProvider).restoreSession();
-    if (profile == null) {
+    try {
+      final profile = await ref
+          .read(authRepositoryProvider)
+          .restoreSession()
+          .timeout(const Duration(seconds: 10));
+      if (profile == null) {
+        state = const AuthState.signedOut();
+        return;
+      }
+      state = _stateForProfile(profile, phoneNumber: profile.phoneNumber);
+    } catch (_) {
+      // A network hiccup, expired/revoked token, or backend error here
+      // must never leave state stuck on "checking" — the splash screen
+      // has nothing else to fall back on. Treat it as no session; the
+      // user just logs in again.
       state = const AuthState.signedOut();
-      return;
     }
-    state = _stateForProfile(profile, phoneNumber: profile.phoneNumber);
   }
 
   Future<void> sendOtp(String phoneNumber) async {

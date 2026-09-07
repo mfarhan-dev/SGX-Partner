@@ -20,7 +20,15 @@ class _SplashScreenState extends ConsumerState<SplashScreen> {
   @override
   void initState() {
     super.initState();
-    _bootstrap();
+    // restoreSession() sets provider state synchronously as its first
+    // statement (before any await), which Riverpod disallows while the
+    // widget tree is still building. Deferring to a microtask lets the
+    // current build finish first — the standard fix for "modify a
+    // provider while the widget tree was building". Without this the
+    // exception was silently swallowed (uncaught in an un-awaited
+    // Future), so _bootstrap() never reached its final context.go(),
+    // and the splash screen hung forever on every launch.
+    Future.microtask(_bootstrap);
   }
 
   Future<void> _bootstrap() async {
