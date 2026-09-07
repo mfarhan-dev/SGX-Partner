@@ -47,12 +47,20 @@ final mechanicProfileDataProvider = FutureProvider<MechanicProfileData>((
   String? photoUrl;
   final photoPath = row['photo_storage_path'] as String?;
   if (photoPath != null) {
-    // Private bucket -- a signed URL, not a public one. 1 day is long
-    // enough that it won't expire mid-session but short enough that a
-    // leaked link doesn't stay valid indefinitely.
-    photoUrl = await client.storage
-        .from('mechanic-photos')
-        .createSignedUrl(photoPath, 60 * 60 * 24);
+    try {
+      // Private bucket -- a signed URL, not a public one. 1 day is long
+      // enough that it won't expire mid-session but short enough that a
+      // leaked link doesn't stay valid indefinitely.
+      photoUrl = await client.storage
+          .from('mechanic-photos')
+          .createSignedUrl(photoPath, 60 * 60 * 24);
+    } catch (_) {
+      // A photo problem (e.g. a legacy staff-uploaded path storage
+      // can't sign for some reason) should never take down the whole
+      // profile -- name/phone/area are still perfectly loadable. Fall
+      // back to no photo instead of failing the entire fetch.
+      photoUrl = null;
+    }
   }
 
   final whatsapp = await client.rpc('get_admin_whatsapp_number') as String?;

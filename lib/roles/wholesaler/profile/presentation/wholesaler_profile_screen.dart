@@ -7,6 +7,7 @@ import '../../../../app/theme/app_colors.dart';
 import '../../../../app/theme/app_spacing.dart';
 import '../../../../core/auth/auth_controller.dart';
 import '../../../../shared/widgets/confirm_dialog.dart';
+import '../../../../shared/widgets/settings_screen_skeleton.dart';
 import '../../../../shared/widgets/sgx_screen.dart';
 import '../../../../shared/widgets/single_choice_dialog.dart';
 import '../data/wholesaler_profile_providers.dart';
@@ -101,100 +102,112 @@ class _WholesalerProfileScreenState
     return SgxScreen(
       title: 'Settings',
       showNotifications: false,
-      children: [
-        profileAsync.when(
-          data: (profile) => _ProfileHeader(profile: profile),
-          loading: () => const _ProfileHeaderSkeleton(),
-          error: (error, stackTrace) => Container(
-            padding: const EdgeInsets.all(AppSpacing.md),
-            decoration: BoxDecoration(
-              color: AppColors.errorContainer,
-              borderRadius: BorderRadius.circular(20),
-            ),
-            child: const Row(
-              children: [
-                Icon(Icons.error_outline, color: AppColors.error),
-                SizedBox(width: AppSpacing.sm),
-                Expanded(
-                  child: Text(
-                    'Could not load your profile. Pull to refresh or try again later.',
-                    style: TextStyle(color: AppColors.text),
-                  ),
+      // Riverpod's own AsyncValue.when() only takes the loading branch
+      // for a genuine first fetch with nothing to show yet -- a
+      // refetch after an edit (which still has the previous value)
+      // keeps rendering `data` with the old value instead of flashing
+      // the skeleton over already-good content.
+      children: profileAsync.when(
+        data: (profile) => _content(profile),
+        loading: () => const [SettingsScreenSkeleton()],
+        error: (error, stackTrace) => _content(null),
+      ),
+    );
+  }
+
+  List<Widget> _content(WholesalerProfileData? profile) {
+    return [
+      if (profile != null)
+        _ProfileHeader(profile: profile)
+      else
+        Container(
+          padding: const EdgeInsets.all(AppSpacing.md),
+          decoration: BoxDecoration(
+            color: AppColors.errorContainer,
+            borderRadius: BorderRadius.circular(20),
+          ),
+          child: const Row(
+            children: [
+              Icon(Icons.error_outline, color: AppColors.error),
+              SizedBox(width: AppSpacing.sm),
+              Expanded(
+                child: Text(
+                  'Could not load your profile. Pull to refresh or try again later.',
+                  style: TextStyle(color: AppColors.text),
                 ),
-              ],
-            ),
+              ),
+            ],
           ),
         ),
-        const SizedBox(height: AppSpacing.lg),
-        const _SectionLabel('Account'),
-        const SizedBox(height: AppSpacing.sm),
-        _SettingsCard(
-          children: [
-            ListTile(
-              leading: const Icon(Icons.smartphone),
-              title: const Text('Registered Phone'),
-              subtitle: Text(profileAsync.value?.phone ?? '—'),
-              trailing: const Icon(Icons.lock_outline),
+      const SizedBox(height: AppSpacing.lg),
+      const _SectionLabel('Account'),
+      const SizedBox(height: AppSpacing.sm),
+      _SettingsCard(
+        children: [
+          ListTile(
+            leading: const Icon(Icons.smartphone),
+            title: const Text('Registered Phone'),
+            subtitle: Text(profile?.phone ?? '—'),
+            trailing: const Icon(Icons.lock_outline),
+          ),
+          const Divider(height: 1),
+          ListTile(
+            leading: const Icon(Icons.storefront),
+            title: const Text('Shop Name'),
+            subtitle: Text(profile?.shopName ?? '—'),
+          ),
+          const Divider(height: 1),
+          ListTile(
+            leading: const Icon(Icons.location_on),
+            title: const Text('Area / City'),
+            subtitle: Text(profile?.area ?? '—'),
+          ),
+        ],
+      ),
+      const SizedBox(height: AppSpacing.lg),
+      const _SectionLabel('General'),
+      const SizedBox(height: AppSpacing.sm),
+      _SettingsCard(
+        children: [
+          ListTile(
+            leading: const Icon(Icons.language),
+            title: const Text('Language'),
+            subtitle: Text(_language),
+            trailing: const Icon(Icons.chevron_right),
+            onTap: _pickLanguage,
+          ),
+          const Divider(height: 1),
+          ListTile(
+            leading: const Icon(Icons.dark_mode_outlined),
+            title: const Text('Theme'),
+            subtitle: Text(_themeLabel),
+            trailing: const Icon(Icons.chevron_right),
+            onTap: _pickTheme,
+          ),
+          const Divider(height: 1),
+          ListTile(
+            leading: const Icon(Icons.support_agent),
+            title: const Text('Contact SGX'),
+            subtitle: Text(
+              profile?.adminWhatsappNumber != null
+                  ? 'WhatsApp: ${profile!.adminWhatsappNumber}'
+                  : '—',
             ),
-            const Divider(height: 1),
-            ListTile(
-              leading: const Icon(Icons.storefront),
-              title: const Text('Shop Name'),
-              subtitle: Text(profileAsync.value?.shopName ?? '—'),
-            ),
-            const Divider(height: 1),
-            ListTile(
-              leading: const Icon(Icons.location_on),
-              title: const Text('Area / City'),
-              subtitle: Text(profileAsync.value?.area ?? '—'),
-            ),
-          ],
-        ),
-        const SizedBox(height: AppSpacing.lg),
-        const _SectionLabel('General'),
-        const SizedBox(height: AppSpacing.sm),
-        _SettingsCard(
-          children: [
-            ListTile(
-              leading: const Icon(Icons.language),
-              title: const Text('Language'),
-              subtitle: Text(_language),
-              trailing: const Icon(Icons.chevron_right),
-              onTap: _pickLanguage,
-            ),
-            const Divider(height: 1),
-            ListTile(
-              leading: const Icon(Icons.dark_mode_outlined),
-              title: const Text('Theme'),
-              subtitle: Text(_themeLabel),
-              trailing: const Icon(Icons.chevron_right),
-              onTap: _pickTheme,
-            ),
-            const Divider(height: 1),
-            ListTile(
-              leading: const Icon(Icons.support_agent),
-              title: const Text('Contact SGX'),
-              subtitle: Text(
-                profileAsync.value?.adminWhatsappNumber != null
-                    ? 'WhatsApp: ${profileAsync.value!.adminWhatsappNumber}'
-                    : '—',
-              ),
-              trailing: const Icon(Icons.chevron_right),
-              onTap: () => _contactSgx(profileAsync.value?.adminWhatsappNumber),
-            ),
-          ],
-        ),
-        const SizedBox(height: AppSpacing.lg),
-        OutlinedButton.icon(
-          style: OutlinedButton.styleFrom(foregroundColor: AppColors.error),
-          onPressed: _logout,
-          icon: const Icon(Icons.logout),
-          label: const Text('Logout'),
-        ),
-        const SizedBox(height: AppSpacing.md),
-        const Center(child: Text('SGX Partners · v1.0.0')),
-      ],
-    );
+            trailing: const Icon(Icons.chevron_right),
+            onTap: () => _contactSgx(profile?.adminWhatsappNumber),
+          ),
+        ],
+      ),
+      const SizedBox(height: AppSpacing.lg),
+      OutlinedButton.icon(
+        style: OutlinedButton.styleFrom(foregroundColor: AppColors.error),
+        onPressed: _logout,
+        icon: const Icon(Icons.logout),
+        label: const Text('Logout'),
+      ),
+      const SizedBox(height: AppSpacing.md),
+      const Center(child: Text('SGX Partners · v1.0.0')),
+    ];
   }
 }
 
@@ -310,33 +323,6 @@ class _ProfileHeader extends StatelessWidget {
             onPressed: () => context.go('/wholesaler/profile/edit'),
             icon: const Icon(Icons.edit_outlined, color: Colors.white),
             style: IconButton.styleFrom(backgroundColor: Colors.white24),
-          ),
-        ],
-      ),
-    );
-  }
-}
-
-class _ProfileHeaderSkeleton extends StatelessWidget {
-  const _ProfileHeaderSkeleton();
-
-  @override
-  Widget build(BuildContext context) {
-    return Container(
-      height: 96,
-      padding: const EdgeInsets.all(AppSpacing.md),
-      decoration: BoxDecoration(
-        borderRadius: BorderRadius.circular(20),
-        color: AppColors.surfaceContainer,
-      ),
-      child: const Row(
-        children: [
-          CircleAvatar(radius: 32, backgroundColor: AppColors.outline),
-          SizedBox(width: AppSpacing.md),
-          SizedBox(
-            width: 20,
-            height: 20,
-            child: CircularProgressIndicator(strokeWidth: 2),
           ),
         ],
       ),
