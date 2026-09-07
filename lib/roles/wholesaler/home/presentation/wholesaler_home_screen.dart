@@ -1,13 +1,15 @@
 import 'package:flutter/material.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 
-import '../../../../app/theme/app_colors.dart';
 import '../../../../app/theme/app_spacing.dart';
 import '../../../../shared/mock/sgx_mock_data.dart';
 import '../../../../shared/models/money_amount.dart';
+import '../../../../shared/widgets/partner_greeting.dart';
 import '../../../../shared/widgets/sgx_cards.dart';
+import '../../profile/data/wholesaler_profile_providers.dart';
 
-class WholesalerHomeScreen extends StatelessWidget {
+class WholesalerHomeScreen extends ConsumerWidget {
   const WholesalerHomeScreen({super.key});
 
   static const _availableBalance = MoneyAmount(cents: 1842000);
@@ -21,30 +23,24 @@ class WholesalerHomeScreen extends StatelessWidget {
   );
 
   @override
-  Widget build(BuildContext context) {
+  Widget build(BuildContext context, WidgetRef ref) {
+    // Same wholesalerProfileDataProvider Settings already fetches once
+    // per session -- reused here so Home shows the real signed-in
+    // person instead of the old hardcoded "Muhammad Farhan" mock.
+    final profileAsync = ref.watch(wholesalerProfileDataProvider);
+
     return Scaffold(
       appBar: AppBar(
-        title: const Row(
-          children: [
-            CircleAvatar(radius: 20, child: Text('MF')),
-            SizedBox(width: AppSpacing.sm),
-            Expanded(
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Text(
-                    'Assalam-o-Alaikum',
-                    style: TextStyle(fontSize: 12, color: AppColors.mutedText),
-                  ),
-                  Text(
-                    'Muhammad Farhan',
-                    overflow: TextOverflow.ellipsis,
-                    style: TextStyle(fontSize: 18, fontWeight: FontWeight.w800),
-                  ),
-                ],
-              ),
-            ),
-          ],
+        title: profileAsync.when(
+          data: (profile) => PartnerGreeting(
+            name: profile.ownerName,
+            photoUrl: profile.photoUrl,
+          ),
+          loading: () => const PartnerGreetingSkeleton(),
+          // A failed fetch here shouldn't block the whole Home screen
+          // the way it would on Settings -- fall back to a neutral
+          // greeting instead of an error banner over the wallet.
+          error: (error, stackTrace) => const PartnerGreeting(name: 'Partner'),
         ),
         actions: [
           IconButton(

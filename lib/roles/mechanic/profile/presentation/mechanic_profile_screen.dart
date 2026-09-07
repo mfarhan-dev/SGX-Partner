@@ -7,6 +7,7 @@ import '../../../../app/theme/app_colors.dart';
 import '../../../../app/theme/app_spacing.dart';
 import '../../../../core/auth/auth_controller.dart';
 import '../../../../shared/widgets/confirm_dialog.dart';
+import '../../../../shared/widgets/partner_avatar.dart';
 import '../../../../shared/widgets/settings_screen_skeleton.dart';
 import '../../../../shared/widgets/sgx_screen.dart';
 import '../../../../shared/widgets/single_choice_dialog.dart';
@@ -268,14 +269,6 @@ class _ProfileHeader extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final initials = profile.fullName
-        .trim()
-        .split(RegExp(r'\s+'))
-        .where((part) => part.isNotEmpty)
-        .take(2)
-        .map((part) => part[0].toUpperCase())
-        .join();
-
     return Container(
       padding: const EdgeInsets.all(AppSpacing.md),
       decoration: BoxDecoration(
@@ -286,21 +279,12 @@ class _ProfileHeader extends StatelessWidget {
       ),
       child: Row(
         children: [
-          CircleAvatar(
+          PartnerAvatar(
+            name: profile.fullName,
+            photoUrl: profile.photoUrl,
             radius: 32,
             backgroundColor: Colors.white24,
-            backgroundImage: profile.photoUrl != null
-                ? NetworkImage(profile.photoUrl!)
-                : null,
-            child: profile.photoUrl == null
-                ? Text(
-                    initials.isEmpty ? '?' : initials,
-                    style: const TextStyle(
-                      color: Colors.white,
-                      fontWeight: FontWeight.w800,
-                    ),
-                  )
-                : null,
+            foregroundColor: Colors.white,
           ),
           const SizedBox(width: AppSpacing.md),
           Expanded(
