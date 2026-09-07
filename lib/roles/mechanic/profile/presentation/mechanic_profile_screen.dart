@@ -1,18 +1,82 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
+import 'package:url_launcher/url_launcher.dart';
 
 import '../../../../app/theme/app_colors.dart';
 import '../../../../app/theme/app_spacing.dart';
 import '../../../../shared/widgets/sgx_screen.dart';
+import '../../../../shared/widgets/single_choice_dialog.dart';
 import '../data/mechanic_profile_providers.dart';
 import '../domain/mechanic_profile_data.dart';
 
-class MechanicProfileScreen extends ConsumerWidget {
+class MechanicProfileScreen extends ConsumerStatefulWidget {
   const MechanicProfileScreen({super.key});
 
   @override
-  Widget build(BuildContext context, WidgetRef ref) {
+  ConsumerState<MechanicProfileScreen> createState() =>
+      _MechanicProfileScreenState();
+}
+
+class _MechanicProfileScreenState extends ConsumerState<MechanicProfileScreen> {
+  // Display-only for now -- picking a value here doesn't change the
+  // app's actual locale or theme yet, per instruction: "at the time we
+  // are not going to apply, we have to just show." Defaults match what
+  // the app already ships with: English, Light.
+  String _language = 'English';
+  String _themeLabel = 'Light';
+
+  Future<void> _pickLanguage() async {
+    final picked = await showSingleChoiceDialog<String>(
+      context: context,
+      title: 'Language',
+      selected: _language,
+      options: const [
+        SingleChoiceOption('English', 'English'),
+        SingleChoiceOption('Urdu', 'اردو (Urdu)'),
+      ],
+    );
+    if (picked != null) setState(() => _language = picked);
+  }
+
+  Future<void> _pickTheme() async {
+    final picked = await showSingleChoiceDialog<String>(
+      context: context,
+      title: 'Theme',
+      selected: _themeLabel,
+      options: const [
+        SingleChoiceOption('Light', 'Light'),
+        SingleChoiceOption('Dark', 'Dark'),
+        SingleChoiceOption('System default', 'System default'),
+      ],
+    );
+    if (picked != null) setState(() => _themeLabel = picked);
+  }
+
+  Future<void> _contactSgx(String? whatsappNumber) async {
+    if (whatsappNumber == null || whatsappNumber.isEmpty) return;
+
+    final digits = whatsappNumber.replaceAll(RegExp(r'[^0-9]'), '');
+    // wa.me needs a full international number with no leading 0 --
+    // treat an 11-digit number starting with 0 as a local PK number
+    // missing its 92 country code, same convention used elsewhere in
+    // this app for phone numbers.
+    final international = digits.startsWith('0')
+        ? '92${digits.substring(1)}'
+        : digits;
+
+    final uri = Uri.parse('https://wa.me/$international');
+    final launched = await launchUrl(uri, mode: LaunchMode.externalApplication);
+
+    if (!launched && mounted) {
+      ScaffoldMessenger.of(
+        context,
+      ).showSnackBar(const SnackBar(content: Text('Could not open WhatsApp.')));
+    }
+  }
+
+  @override
+  Widget build(BuildContext context) {
     final profileAsync = ref.watch(mechanicProfileDataProvider);
 
     return SgxScreen(
@@ -75,17 +139,17 @@ class MechanicProfileScreen extends ConsumerWidget {
             ListTile(
               leading: const Icon(Icons.language),
               title: const Text('Language'),
-              subtitle: const Text('English'),
+              subtitle: Text(_language),
               trailing: const Icon(Icons.chevron_right),
-              onTap: () => context.go('/profile/preferences'),
+              onTap: _pickLanguage,
             ),
             const Divider(height: 1),
             ListTile(
               leading: const Icon(Icons.dark_mode_outlined),
               title: const Text('Theme'),
-              subtitle: const Text('Light'),
+              subtitle: Text(_themeLabel),
               trailing: const Icon(Icons.chevron_right),
-              onTap: () => context.go('/profile/preferences'),
+              onTap: _pickTheme,
             ),
             const Divider(height: 1),
             ListTile(
@@ -97,6 +161,7 @@ class MechanicProfileScreen extends ConsumerWidget {
                     : '—',
               ),
               trailing: const Icon(Icons.chevron_right),
+              onTap: () => _contactSgx(profileAsync.value?.adminWhatsappNumber),
             ),
           ],
         ),
