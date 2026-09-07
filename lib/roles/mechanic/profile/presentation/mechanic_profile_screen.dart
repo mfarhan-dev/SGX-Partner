@@ -5,6 +5,8 @@ import 'package:url_launcher/url_launcher.dart';
 
 import '../../../../app/theme/app_colors.dart';
 import '../../../../app/theme/app_spacing.dart';
+import '../../../../core/auth/auth_controller.dart';
+import '../../../../shared/widgets/confirm_dialog.dart';
 import '../../../../shared/widgets/sgx_screen.dart';
 import '../../../../shared/widgets/single_choice_dialog.dart';
 import '../data/mechanic_profile_providers.dart';
@@ -73,6 +75,26 @@ class _MechanicProfileScreenState extends ConsumerState<MechanicProfileScreen> {
         context,
       ).showSnackBar(const SnackBar(content: Text('Could not open WhatsApp.')));
     }
+  }
+
+  Future<void> _logout() async {
+    final confirmed = await showConfirmDialog(
+      context: context,
+      title: 'Log out?',
+      message:
+          'You will need to verify your phone number again to sign '
+          'back in.',
+      confirmLabel: 'Log out',
+      isDestructive: true,
+    );
+    if (!confirmed) return;
+
+    // The old version just navigated to /auth/phone without actually
+    // signing out -- the Supabase session stayed alive, so logging in
+    // again as a different mechanic could still race against a lingering
+    // session. Route through the real controller instead.
+    await ref.read(authControllerProvider.notifier).signOut();
+    if (mounted) context.go('/auth/phone');
   }
 
   @override
@@ -168,7 +190,7 @@ class _MechanicProfileScreenState extends ConsumerState<MechanicProfileScreen> {
         const SizedBox(height: AppSpacing.lg),
         OutlinedButton.icon(
           style: OutlinedButton.styleFrom(foregroundColor: AppColors.error),
-          onPressed: () => context.go('/auth/phone'),
+          onPressed: _logout,
           icon: const Icon(Icons.logout),
           label: const Text('Logout'),
         ),

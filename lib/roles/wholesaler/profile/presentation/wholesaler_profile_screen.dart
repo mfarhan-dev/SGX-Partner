@@ -1,15 +1,36 @@
 import 'package:flutter/material.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 
 import '../../../../app/theme/app_colors.dart';
 import '../../../../app/theme/app_spacing.dart';
+import '../../../../core/auth/auth_controller.dart';
+import '../../../../shared/widgets/confirm_dialog.dart';
 import '../../../../shared/widgets/sgx_screen.dart';
 
-class WholesalerProfileScreen extends StatelessWidget {
+class WholesalerProfileScreen extends ConsumerWidget {
   const WholesalerProfileScreen({super.key});
 
+  Future<void> _logout(BuildContext context, WidgetRef ref) async {
+    final confirmed = await showConfirmDialog(
+      context: context,
+      title: 'Log out?',
+      message:
+          'You will need to verify your phone number again to sign '
+          'back in.',
+      confirmLabel: 'Log out',
+      isDestructive: true,
+    );
+    if (!confirmed) return;
+
+    // Previously just navigated to /auth/phone without actually signing
+    // out -- the Supabase session stayed alive underneath.
+    await ref.read(authControllerProvider.notifier).signOut();
+    if (context.mounted) context.go('/auth/phone');
+  }
+
   @override
-  Widget build(BuildContext context) {
+  Widget build(BuildContext context, WidgetRef ref) {
     return SgxScreen(
       title: 'Settings',
       showNotifications: false,
@@ -96,7 +117,7 @@ class WholesalerProfileScreen extends StatelessWidget {
         const SizedBox(height: AppSpacing.md),
         OutlinedButton.icon(
           style: OutlinedButton.styleFrom(foregroundColor: AppColors.error),
-          onPressed: () => context.go('/auth/phone'),
+          onPressed: () => _logout(context, ref),
           icon: const Icon(Icons.logout),
           label: const Text('Logout'),
         ),
