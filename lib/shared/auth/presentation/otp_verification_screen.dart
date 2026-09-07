@@ -5,11 +5,11 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import 'package:supabase_flutter/supabase_flutter.dart' show Supabase;
 
+import '../../../app/router/route_guards.dart';
 import '../../../app/theme/app_colors.dart';
 import '../../../app/theme/app_spacing.dart';
 import '../../../core/auth/auth_controller.dart';
 import '../../../core/auth/auth_state.dart';
-import '../../../shared/models/app_role.dart';
 import '../../../shared/widgets/sgx_app_bar.dart';
 import '../../../shared/widgets/sgx_logo.dart';
 
@@ -269,23 +269,18 @@ class _OtpVerificationScreenState extends ConsumerState<OtpVerificationScreen> {
     final auth = ref.read(authControllerProvider);
     if (!mounted) return;
 
-    if (auth.status == AuthStatus.accountUnavailable) {
-      context.go('/auth/account-unavailable');
-      return;
-    }
     // Verification failed (wrong/expired code, network error, etc.) —
     // status stays otpSent and auth.errorMessage is already shown above.
-    // A null profile here does NOT mean "new mechanic"; only a
-    // successful signedIn state carries a real routing decision.
-    if (auth.status != AuthStatus.signedIn) return;
-
-    if (auth.profile?.role == AppRole.wholesaler) {
-      context.go('/wholesaler/home');
-    } else if (auth.profile?.isComplete == false || auth.profile == null) {
-      context.go('/mechanic/onboarding');
-    } else {
-      context.go('/mechanic/home');
+    // Only a successful signedIn/accountUnavailable state carries a
+    // real routing decision; RouteGuards is the single source of truth
+    // for that decision, shared with the splash screen's session
+    // restore so the two never drift out of sync.
+    if (auth.status != AuthStatus.signedIn &&
+        auth.status != AuthStatus.accountUnavailable) {
+      return;
     }
+
+    context.go(RouteGuards.protectedLanding(auth));
   }
 
   String _maskedPhone(String? phone) {

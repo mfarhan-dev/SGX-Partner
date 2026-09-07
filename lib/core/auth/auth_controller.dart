@@ -48,7 +48,7 @@ class AuthController extends Notifier<AuthState> {
     final phoneNumber = state.phoneNumber;
     if (phoneNumber == null) return;
 
-    state = state.copyWith(status: AuthStatus.checking);
+    state = state.copyWith(status: AuthStatus.checking, errorMessage: null);
     try {
       final profile = await ref
           .read(authRepositoryProvider)
