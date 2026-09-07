@@ -31,13 +31,16 @@ class _PhoneLoginScreenState extends ConsumerState<PhoneLoginScreen> {
   Widget build(BuildContext context) {
     final isLoading =
         ref.watch(authControllerProvider).status == AuthStatus.checking;
+    final isDark = Theme.of(context).brightness == Brightness.dark;
 
     // No AppBar on this screen to auto-derive the status bar style, and
     // the splash screen before it forces light (white) icons for its red
     // background — without this, that white style leaks into this
-    // light-background screen and the icons become invisible.
+    // screen. Must follow the actual theme brightness (not a hardcoded
+    // .dark) since this screen's own background flips between light and
+    // dark with the system theme.
     return AnnotatedRegion<SystemUiOverlayStyle>(
-      value: SystemUiOverlayStyle.dark,
+      value: isDark ? SystemUiOverlayStyle.light : SystemUiOverlayStyle.dark,
       child: Scaffold(
         body: SafeArea(
           child: LayoutBuilder(
@@ -194,6 +197,8 @@ class _PhoneLoginScreenState extends ConsumerState<PhoneLoginScreen> {
   }
 
   Future<void> _submit() async {
+    FocusManager.instance.primaryFocus?.unfocus();
+
     final phone = _controller.text.replaceAll(RegExp(r'[\s-]'), '').trim();
     if (phone.isEmpty) {
       setState(() => _errorText = 'Phone number is required.');

@@ -257,6 +257,8 @@ class _OtpVerificationScreenState extends ConsumerState<OtpVerificationScreen> {
   }
 
   Future<void> _submit() async {
+    FocusManager.instance.primaryFocus?.unfocus();
+
     final otp = _controller.text.trim();
     if (otp.isEmpty) {
       setState(() => _errorText = 'OTP is required.');

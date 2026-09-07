@@ -48,6 +48,13 @@ class AppRoutes {
         path: '/auth/account-unavailable',
         builder: (_, __) => const AccountUnavailableScreen(),
       ),
+      // Outside the shell (like the /auth/* screens above): this is a
+      // one-time, standalone setup step, not a destination the bottom
+      // nav should ever show or let the user tab back into.
+      GoRoute(
+        path: '/mechanic/onboarding',
+        builder: (_, __) => const CompleteMechanicProfileScreen(),
+      ),
       ShellRoute(
         builder: (_, __, child) => SgxPartnersShell(child: child),
         routes: [
@@ -81,10 +88,6 @@ class AppRoutes {
               title: 'Preferences',
               description: 'Theme and language preferences placeholder.',
             ),
-          ),
-          GoRoute(
-            path: '/mechanic/onboarding',
-            builder: (_, __) => const CompleteMechanicProfileScreen(),
           ),
           GoRoute(
             path: '/mechanic/home',

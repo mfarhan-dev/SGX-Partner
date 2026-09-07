@@ -45,5 +45,11 @@
 	<true/>
 	<key>UIApplicationSupportsIndirectInputEvents</key>
 	<true/>
+	<key>NSCameraUsageDescription</key>
+	<string>SGX Partners uses your camera to take a profile photo during onboarding.</string>
+	<key>NSPhotoLibraryUsageDescription</key>
+	<string>SGX Partners uses your photo library to let you choose a profile photo during onboarding.</string>
+	<key>NSLocationWhenInUseUsageDescription</key>
+	<string>SGX Partners uses your location to record your workshop's exact location during onboarding.</string>
 </dict>
 </plist>
