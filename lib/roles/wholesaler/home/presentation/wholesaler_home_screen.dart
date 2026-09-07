@@ -3,6 +3,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 
 import '../../../../app/theme/app_spacing.dart';
+import '../../../../shared/campaigns/data/active_campaigns_providers.dart';
 import '../../../../shared/mock/sgx_mock_data.dart';
 import '../../../../shared/models/money_amount.dart';
 import '../../../../shared/widgets/partner_greeting.dart';
@@ -28,6 +29,7 @@ class WholesalerHomeScreen extends ConsumerWidget {
     // per session -- reused here so Home shows the real signed-in
     // person instead of the old hardcoded "Muhammad Farhan" mock.
     final profileAsync = ref.watch(wholesalerProfileDataProvider);
+    final campaignsAsync = ref.watch(activeCampaignsProvider);
 
     return Scaffold(
       appBar: AppBar(
@@ -71,7 +73,7 @@ class WholesalerHomeScreen extends ConsumerWidget {
               availableBalance: _availableBalance,
             ),
             const SizedBox(height: AppSpacing.md),
-            CampaignTile(campaign: mockCampaigns.last),
+            CampaignCarousel(campaigns: campaignsAsync.value ?? const []),
           ],
         ),
       ),

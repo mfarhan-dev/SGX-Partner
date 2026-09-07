@@ -4,6 +4,7 @@ import 'package:go_router/go_router.dart';
 import '../../app/theme/app_colors.dart';
 import '../../app/theme/app_spacing.dart';
 import '../../core/utils/money_formatter.dart';
+import '../campaigns/domain/active_campaign.dart';
 import '../mock/sgx_mock_data.dart';
 import '../models/money_amount.dart';
 
@@ -241,67 +242,176 @@ class ProductTile extends StatelessWidget {
   }
 }
 
+/// Full-bleed photo card -- the image fills the whole card, a dark
+/// gradient fades in at the bottom so white text stays legible over
+/// whatever the photo looks like, and the title/date sit directly on
+/// that fade instead of a separate white content block underneath.
+/// Standard promo-banner treatment (Play Store featured banners,
+/// Netflix tiles): one photo, not "photo + label stuck below it".
+///
+/// No status pill -- every campaign this card is ever given is already
+/// guaranteed active (get_active_campaigns() only returns those), so a
+/// pill that always says the same word tells the viewer nothing.
 class CampaignTile extends StatelessWidget {
   const CampaignTile({super.key, required this.campaign});
 
-  final MockCampaign campaign;
+  final ActiveCampaign campaign;
 
   @override
   Widget build(BuildContext context) {
     return InkWell(
       borderRadius: BorderRadius.circular(16),
       onTap: () => context.go('/campaigns/${campaign.id}'),
-      child: Ink(
-        decoration: BoxDecoration(
-          color: Theme.of(context).colorScheme.surface,
-          borderRadius: BorderRadius.circular(16),
-          border: Border.all(color: AppColors.outline),
-        ),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            Container(
-              height: 130,
-              decoration: BoxDecoration(
-                color: campaign.tone.withValues(alpha: 0.12),
-                borderRadius: const BorderRadius.vertical(
-                  top: Radius.circular(16),
+      child: ClipRRect(
+        borderRadius: BorderRadius.circular(16),
+        child: AspectRatio(
+          aspectRatio: 16 / 9,
+          child: Stack(
+            fit: StackFit.expand,
+            children: [
+              campaign.imageUrl != null
+                  ? Image.network(
+                      campaign.imageUrl!,
+                      fit: BoxFit.cover,
+                      errorBuilder: (context, error, stackTrace) =>
+                          _campaignImagePlaceholder(),
+                    )
+                  : _campaignImagePlaceholder(),
+              const DecoratedBox(
+                decoration: BoxDecoration(
+                  gradient: LinearGradient(
+                    begin: Alignment.topCenter,
+                    end: Alignment.bottomCenter,
+                    stops: [0.35, 1],
+                    colors: [Colors.transparent, Colors.black87],
+                  ),
                 ),
               ),
-              child: Center(
-                child: Icon(campaign.icon, size: 56, color: campaign.tone),
-              ),
-            ),
-            Padding(
-              padding: const EdgeInsets.all(AppSpacing.md),
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Row(
-                    children: [
-                      _MiniPill(label: 'ACTIVE', color: AppColors.success),
-                      const Spacer(),
-                      const Icon(Icons.chevron_right),
+              Positioned(
+                left: 12,
+                right: 12,
+                bottom: 10,
+                child: Column(
+                  mainAxisSize: MainAxisSize.min,
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                      campaign.title,
+                      maxLines: 2,
+                      overflow: TextOverflow.ellipsis,
+                      style: const TextStyle(
+                        color: Colors.white,
+                        fontWeight: FontWeight.w800,
+                        fontSize: 15,
+                      ),
+                    ),
+                    if (campaign.dateWindow.isNotEmpty) ...[
+                      const SizedBox(height: 2),
+                      Text(
+                        campaign.dateWindow,
+                        style: const TextStyle(
+                          color: Colors.white70,
+                          fontSize: 11.5,
+                        ),
+                      ),
                     ],
-                  ),
-                  const SizedBox(height: AppSpacing.sm),
-                  Text(
-                    campaign.title,
-                    style: Theme.of(context).textTheme.titleMedium,
-                  ),
-                  const SizedBox(height: 4),
-                  Text(
-                    campaign.dateWindow,
-                    style: Theme.of(
-                      context,
-                    ).textTheme.bodySmall?.copyWith(color: AppColors.mutedText),
-                  ),
-                ],
+                  ],
+                ),
               ),
-            ),
-          ],
+            ],
+          ),
         ),
       ),
+    );
+  }
+
+  static Widget _campaignImagePlaceholder() {
+    return Container(
+      color: AppColors.primaryDark,
+      child: const Center(
+        child: Icon(Icons.campaign_outlined, size: 40, color: Colors.white38),
+      ),
+    );
+  }
+}
+
+/// Home's campaign section. A single campaign shows as a plain full-width
+/// CampaignTile, exactly as before -- carousel chrome (the peek viewport
+/// and dots) only appears once there is something to browse between.
+/// With 2+, cards peek in from the right edge (PageView with a
+/// viewportFraction < 1) with dot indicators below, same pattern as most
+/// apps' horizontally-scrolling offer rows.
+class CampaignCarousel extends StatefulWidget {
+  const CampaignCarousel({super.key, required this.campaigns});
+
+  final List<ActiveCampaign> campaigns;
+
+  @override
+  State<CampaignCarousel> createState() => _CampaignCarouselState();
+}
+
+class _CampaignCarouselState extends State<CampaignCarousel> {
+  late final _controller = PageController(viewportFraction: 0.86);
+  int _page = 0;
+
+  @override
+  void dispose() {
+    _controller.dispose();
+    super.dispose();
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    if (widget.campaigns.isEmpty) return const SizedBox.shrink();
+
+    if (widget.campaigns.length == 1) {
+      return CampaignTile(campaign: widget.campaigns.single);
+    }
+
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.stretch,
+      children: [
+        SizedBox(
+          // Matches CampaignTile's own 16:9 AspectRatio at roughly the
+          // width a card renders at inside this carousel (viewportFraction
+          // 0.86 minus the peek gutter) -- kept as a plain number here
+          // since PageView needs one fixed height up front for every page.
+          height: 176,
+          child: PageView.builder(
+            controller: _controller,
+            // Without this, PageView adds invisible leading/trailing
+            // padding so the FIRST and LAST card can also center in the
+            // viewport -- which is exactly what was showing the previous
+            // card peeking in from the left on the last page. false
+            // keeps every card flush against the left edge, peeking only
+            // on the right, matching the approved prototype.
+            padEnds: false,
+            itemCount: widget.campaigns.length,
+            onPageChanged: (page) => setState(() => _page = page),
+            itemBuilder: (context, index) => Padding(
+              padding: const EdgeInsets.only(right: AppSpacing.sm),
+              child: CampaignTile(campaign: widget.campaigns[index]),
+            ),
+          ),
+        ),
+        const SizedBox(height: AppSpacing.sm),
+        Row(
+          mainAxisAlignment: MainAxisAlignment.center,
+          children: [
+            for (var i = 0; i < widget.campaigns.length; i++)
+              AnimatedContainer(
+                duration: const Duration(milliseconds: 200),
+                margin: const EdgeInsets.symmetric(horizontal: 3),
+                width: i == _page ? 16 : 6,
+                height: 6,
+                decoration: BoxDecoration(
+                  color: i == _page ? AppColors.primary : AppColors.outline,
+                  borderRadius: BorderRadius.circular(3),
+                ),
+              ),
+          ],
+        ),
+      ],
     );
   }
 }
