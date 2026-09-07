@@ -220,7 +220,7 @@ class _MechanicProfileFormState extends State<MechanicProfileForm> {
             errorText: _fullNameError,
           ),
         ),
-        const SizedBox(height: AppSpacing.sm),
+        const SizedBox(height: AppSpacing.md),
         TextField(
           controller: _cnicController,
           keyboardType: TextInputType.number,
@@ -237,7 +237,7 @@ class _MechanicProfileFormState extends State<MechanicProfileForm> {
             errorText: _cnicError,
           ),
         ),
-        const SizedBox(height: AppSpacing.sm),
+        const SizedBox(height: AppSpacing.md),
         TextField(
           controller: _workshopNameController,
           onChanged: (_) {
@@ -251,7 +251,7 @@ class _MechanicProfileFormState extends State<MechanicProfileForm> {
             errorText: _workshopNameError,
           ),
         ),
-        const SizedBox(height: AppSpacing.sm),
+        const SizedBox(height: AppSpacing.md),
         InkWell(
           borderRadius: BorderRadius.circular(12),
           onTap: _pickArea,
@@ -270,7 +270,7 @@ class _MechanicProfileFormState extends State<MechanicProfileForm> {
             ),
           ),
         ),
-        const SizedBox(height: AppSpacing.sm),
+        const SizedBox(height: AppSpacing.md),
         TextField(
           controller: _addressController,
           maxLines: 2,
@@ -280,7 +280,7 @@ class _MechanicProfileFormState extends State<MechanicProfileForm> {
             prefixIcon: Icon(Icons.signpost_outlined),
           ),
         ),
-        const SizedBox(height: AppSpacing.sm),
+        const SizedBox(height: AppSpacing.md),
         _buildLocationCapture(context),
         if (_submitError != null) ...[
           const SizedBox(height: AppSpacing.sm),

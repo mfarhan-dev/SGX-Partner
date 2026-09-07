@@ -55,6 +55,14 @@ class AppRoutes {
         path: '/mechanic/onboarding',
         builder: (_, __) => const CompleteMechanicProfileScreen(),
       ),
+      // Same reasoning as onboarding above: a focused edit task reached
+      // via the pencil icon on the profile header, not a tab the
+      // bottom nav should show underneath. Back button (from its own
+      // AppBar) returns to /mechanic/profile.
+      GoRoute(
+        path: '/mechanic/profile/edit',
+        builder: (_, __) => const EditMechanicProfileScreen(),
+      ),
       ShellRoute(
         builder: (_, __, child) => SgxPartnersShell(child: child),
         routes: [
@@ -122,10 +130,6 @@ class AppRoutes {
           GoRoute(
             path: '/mechanic/profile',
             builder: (_, __) => const MechanicProfileScreen(),
-          ),
-          GoRoute(
-            path: '/mechanic/profile/edit',
-            builder: (_, __) => const EditMechanicProfileScreen(),
           ),
           GoRoute(
             path: '/wholesaler/home',
