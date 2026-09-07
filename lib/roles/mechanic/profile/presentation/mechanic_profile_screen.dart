@@ -42,62 +42,62 @@ class MechanicProfileScreen extends ConsumerWidget {
             ),
           ),
         ),
-        const SizedBox(height: AppSpacing.md),
-        Card(
-          child: Column(
-            children: [
-              ListTile(
-                leading: const Icon(Icons.smartphone),
-                title: const Text('Verified Phone'),
-                subtitle: Text(profileAsync.value?.phone ?? '—'),
-                trailing: const Icon(Icons.lock_outline),
-              ),
-              const Divider(height: 1),
-              ListTile(
-                leading: const Icon(Icons.storefront),
-                title: const Text('Workshop'),
-                subtitle: Text(profileAsync.value?.workshopName ?? '—'),
-              ),
-              const Divider(height: 1),
-              ListTile(
-                leading: const Icon(Icons.location_on),
-                title: const Text('Area / City'),
-                subtitle: Text(profileAsync.value?.area ?? '—'),
-              ),
-            ],
-          ),
+        const SizedBox(height: AppSpacing.lg),
+        const _SectionLabel('Account'),
+        const SizedBox(height: AppSpacing.sm),
+        _SettingsCard(
+          children: [
+            ListTile(
+              leading: const Icon(Icons.smartphone),
+              title: const Text('Verified Phone'),
+              subtitle: Text(profileAsync.value?.phone ?? '—'),
+              trailing: const Icon(Icons.lock_outline),
+            ),
+            const Divider(height: 1),
+            ListTile(
+              leading: const Icon(Icons.storefront),
+              title: const Text('Workshop'),
+              subtitle: Text(profileAsync.value?.workshopName ?? '—'),
+            ),
+            const Divider(height: 1),
+            ListTile(
+              leading: const Icon(Icons.location_on),
+              title: const Text('Area / City'),
+              subtitle: Text(profileAsync.value?.area ?? '—'),
+            ),
+          ],
         ),
-        const SizedBox(height: AppSpacing.md),
-        Card(
-          child: Column(
-            children: [
-              ListTile(
-                leading: const Icon(Icons.edit_outlined),
-                title: const Text('Edit Profile'),
-                trailing: const Icon(Icons.chevron_right),
-                onTap: () => context.go('/mechanic/profile/edit'),
+        const SizedBox(height: AppSpacing.lg),
+        const _SectionLabel('General'),
+        const SizedBox(height: AppSpacing.sm),
+        _SettingsCard(
+          children: [
+            ListTile(
+              leading: const Icon(Icons.edit_outlined),
+              title: const Text('Edit Profile'),
+              trailing: const Icon(Icons.chevron_right),
+              onTap: () => context.go('/mechanic/profile/edit'),
+            ),
+            ListTile(
+              leading: const Icon(Icons.language),
+              title: const Text('Language & Theme'),
+              subtitle: const Text('English · Light'),
+              trailing: const Icon(Icons.chevron_right),
+              onTap: () => context.go('/profile/preferences'),
+            ),
+            ListTile(
+              leading: const Icon(Icons.support_agent),
+              title: const Text('Contact SGX'),
+              subtitle: Text(
+                profileAsync.value?.adminWhatsappNumber != null
+                    ? 'WhatsApp: ${profileAsync.value!.adminWhatsappNumber}'
+                    : '—',
               ),
-              ListTile(
-                leading: const Icon(Icons.language),
-                title: const Text('Language & Theme'),
-                subtitle: const Text('English · Light'),
-                trailing: const Icon(Icons.chevron_right),
-                onTap: () => context.go('/profile/preferences'),
-              ),
-              ListTile(
-                leading: const Icon(Icons.support_agent),
-                title: const Text('Contact SGX'),
-                subtitle: Text(
-                  profileAsync.value?.adminWhatsappNumber != null
-                      ? 'WhatsApp: ${profileAsync.value!.adminWhatsappNumber}'
-                      : '—',
-                ),
-                trailing: const Icon(Icons.chevron_right),
-              ),
-            ],
-          ),
+              trailing: const Icon(Icons.chevron_right),
+            ),
+          ],
         ),
-        const SizedBox(height: AppSpacing.md),
+        const SizedBox(height: AppSpacing.lg),
         OutlinedButton.icon(
           style: OutlinedButton.styleFrom(foregroundColor: AppColors.error),
           onPressed: () => context.go('/auth/phone'),
@@ -107,6 +107,53 @@ class MechanicProfileScreen extends ConsumerWidget {
         const SizedBox(height: AppSpacing.md),
         const Center(child: Text('SGX Partners · v1.0.0')),
       ],
+    );
+  }
+}
+
+/// Small bold label above a settings group ("Account", "General") —
+/// the grouped cards previously had no title at all, so the two
+/// unlabeled cards back-to-back gave no hint what each one was for.
+/// Sentence case, not ALL CAPS: a tracked-out caps eyebrow is a
+/// generic "AI template" tell, not a deliberate choice for this app.
+class _SectionLabel extends StatelessWidget {
+  const _SectionLabel(this.label);
+
+  final String label;
+
+  @override
+  Widget build(BuildContext context) {
+    return Padding(
+      padding: const EdgeInsets.symmetric(horizontal: 4),
+      child: Text(
+        label,
+        style: Theme.of(
+          context,
+        ).textTheme.titleSmall?.copyWith(fontWeight: FontWeight.w800),
+      ),
+    );
+  }
+}
+
+/// Explicit surface color + generous radius: the default Card color is
+/// close enough to the cream scaffold background that the rounded
+/// corners barely read against it — this makes the card unmistakably
+/// a distinct, rounded surface.
+class _SettingsCard extends StatelessWidget {
+  const _SettingsCard({required this.children});
+
+  final List<Widget> children;
+
+  @override
+  Widget build(BuildContext context) {
+    return Card(
+      color: AppColors.surface,
+      shape: RoundedRectangleBorder(
+        borderRadius: BorderRadius.circular(16),
+        side: const BorderSide(color: AppColors.outline),
+      ),
+      clipBehavior: Clip.antiAlias,
+      child: Column(children: children),
     );
   }
 }
