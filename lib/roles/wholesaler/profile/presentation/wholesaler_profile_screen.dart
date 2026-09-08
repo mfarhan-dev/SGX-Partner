@@ -127,14 +127,14 @@ class _WholesalerProfileScreenState
             color: AppColors.errorContainer,
             borderRadius: BorderRadius.circular(20),
           ),
-          child: const Row(
+          child: Row(
             children: [
-              Icon(Icons.error_outline, color: AppColors.error),
-              SizedBox(width: AppSpacing.sm),
+              const Icon(Icons.error_outline, color: AppColors.error),
+              const SizedBox(width: AppSpacing.sm),
               Expanded(
                 child: Text(
                   'Could not load your profile. Pull to refresh or try again later.',
-                  style: TextStyle(color: AppColors.text),
+                  style: TextStyle(color: AppColors.textOf(context)),
                 ),
               ),
             ],
@@ -243,10 +243,10 @@ class _SettingsCard extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Card(
-      color: AppColors.surface,
+      color: AppColors.surfaceOf(context),
       shape: RoundedRectangleBorder(
         borderRadius: BorderRadius.circular(16),
-        side: const BorderSide(color: AppColors.outline),
+        side: BorderSide(color: AppColors.outlineOf(context)),
       ),
       clipBehavior: Clip.antiAlias,
       child: Column(children: children),

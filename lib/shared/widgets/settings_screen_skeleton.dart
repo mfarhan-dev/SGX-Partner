@@ -17,27 +17,27 @@ class SettingsScreenSkeleton extends StatelessWidget {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.stretch,
       children: [
-        _headerSkeleton(),
+        _headerSkeleton(context),
         const SizedBox(height: AppSpacing.lg),
         const SkeletonBox(width: 80, height: 16),
         const SizedBox(height: AppSpacing.sm),
-        _cardSkeleton(rows: 3),
+        _cardSkeleton(context, rows: 3),
         const SizedBox(height: AppSpacing.lg),
         const SkeletonBox(width: 80, height: 16),
         const SizedBox(height: AppSpacing.sm),
-        _cardSkeleton(rows: 3),
+        _cardSkeleton(context, rows: 3),
         const SizedBox(height: AppSpacing.lg),
         const SkeletonBox(width: double.infinity, height: 48, radius: 12),
       ],
     );
   }
 
-  Widget _headerSkeleton() {
+  Widget _headerSkeleton(BuildContext context) {
     return Container(
       padding: const EdgeInsets.all(AppSpacing.md),
       decoration: BoxDecoration(
         borderRadius: BorderRadius.circular(20),
-        color: AppColors.surfaceContainer,
+        color: AppColors.surfaceContainerOf(context),
       ),
       child: Row(
         children: [
@@ -58,12 +58,12 @@ class SettingsScreenSkeleton extends StatelessWidget {
     );
   }
 
-  Widget _cardSkeleton({required int rows}) {
+  Widget _cardSkeleton(BuildContext context, {required int rows}) {
     return Card(
-      color: AppColors.surface,
+      color: AppColors.surfaceOf(context),
       shape: RoundedRectangleBorder(
         borderRadius: BorderRadius.circular(16),
-        side: const BorderSide(color: AppColors.outline),
+        side: BorderSide(color: AppColors.outlineOf(context)),
       ),
       clipBehavior: Clip.antiAlias,
       child: Column(
