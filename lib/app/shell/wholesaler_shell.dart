@@ -28,7 +28,7 @@ class WholesalerShell extends StatelessWidget {
               ),
               _WholesalerNavItem(
                 icon: Icons.receipt_long_outlined,
-                label: 'Activity',
+                label: 'Ledger',
                 route: '/wholesaler/wallet',
               ),
               _WholesalerNavItem(

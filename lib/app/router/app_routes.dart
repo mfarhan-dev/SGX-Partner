@@ -14,7 +14,7 @@ import '../../roles/wholesaler/home/presentation/wholesaler_home_screen.dart';
 import '../../roles/wholesaler/profile/presentation/edit_wholesaler_profile_screen.dart';
 import '../../roles/wholesaler/profile/presentation/wholesaler_profile_screen.dart';
 import '../../roles/wholesaler/qr_progress/presentation/qr_progress_screen.dart';
-import '../../roles/wholesaler/wallet/presentation/wholesaler_wallet_screen.dart';
+import '../../roles/wholesaler/wallet/presentation/wholesaler_ledger_screen.dart';
 import '../../roles/wholesaler/withdrawals/presentation/wholesaler_withdraw_money_screen.dart';
 import '../../roles/wholesaler/withdrawals/presentation/wholesaler_withdrawal_detail_screen.dart';
 import '../../roles/wholesaler/withdrawals/presentation/wholesaler_withdrawals_screen.dart';
@@ -150,7 +150,7 @@ class AppRoutes {
           ),
           GoRoute(
             path: '/wholesaler/wallet',
-            builder: (_, __) => const WholesalerWalletScreen(),
+            builder: (_, __) => const WholesalerLedgerScreen(),
           ),
           GoRoute(
             path: '/wholesaler/withdrawals',

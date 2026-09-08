@@ -103,33 +103,6 @@ const mechanicTransactions = [
   ),
 ];
 
-const wholesalerTransactions = [
-  MockTransaction(
-    title: 'QR reward added',
-    subtitle: 'Shell Advance AX7 · 2 mins ago',
-    amount: MoneyAmount(cents: 1200),
-    icon: Icons.add_circle_outline,
-    tone: Color(0xFF138A43),
-    status: 'Confirmed',
-  ),
-  MockTransaction(
-    title: 'Payment sent',
-    subtitle: 'JazzCash · Today',
-    amount: MoneyAmount(cents: -500000),
-    icon: Icons.send_outlined,
-    tone: Color(0xFF253765),
-    status: 'Confirm now',
-  ),
-  MockTransaction(
-    title: 'Money returned to wallet',
-    subtitle: 'Refunded withdrawal · 20 Jul',
-    amount: MoneyAmount(cents: 250000),
-    icon: Icons.currency_exchange_outlined,
-    tone: Color(0xFF138A43),
-    status: 'Refunded',
-  ),
-];
-
 const mockWithdrawals = [
   MockWithdrawal(
     id: 'wd-001',
