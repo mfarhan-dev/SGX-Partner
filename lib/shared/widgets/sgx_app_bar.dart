@@ -1,9 +1,12 @@
 import 'package:flutter/material.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 
+import '../../core/auth/auth_controller.dart';
+import '../models/app_role.dart';
 import 'sgx_logo.dart';
 
-class SgxAppBar extends StatelessWidget implements PreferredSizeWidget {
+class SgxAppBar extends ConsumerWidget implements PreferredSizeWidget {
   const SgxAppBar({
     super.key,
     required this.title,
@@ -20,7 +23,7 @@ class SgxAppBar extends StatelessWidget implements PreferredSizeWidget {
   final bool showNotifications;
 
   @override
-  Widget build(BuildContext context) {
+  Widget build(BuildContext context, WidgetRef ref) {
     final effectiveActions = <Widget>[
       if (showNotifications)
         IconButton(
@@ -41,9 +44,19 @@ class SgxAppBar extends StatelessWidget implements PreferredSizeWidget {
               onPressed: () {
                 if (context.canPop()) {
                   context.pop();
-                } else {
-                  context.go('/mechanic/home');
+                  return;
                 }
+                // Reached via a context.go() with no back stack behind
+                // it -- this app bar is shared by both roles, so the
+                // fallback has to know who's actually signed in rather
+                // than always landing a wholesaler on the mechanic
+                // home screen.
+                final role = ref.read(authControllerProvider).profile?.role;
+                context.go(
+                  role == AppRole.wholesaler
+                      ? '/wholesaler/home'
+                      : '/mechanic/home',
+                );
               },
             )
           : null,

@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import 'package:intl/intl.dart';
@@ -40,54 +41,75 @@ class CampaignDetailScreen extends ConsumerWidget {
       }
     }
 
-    // No explicit backgroundColor here -- Scaffold falls back to
-    // ThemeData.scaffoldBackgroundColor, which AppTheme already sets
-    // correctly per theme (light cream vs. true black).
-    return Scaffold(
-      body: SafeArea(
-        bottom: false,
-        child: Stack(
-          children: [
-            campaignsAsync.when(
-              data: (_) => campaign == null
-                  ? const _CampaignNotFound()
-                  : _CampaignDetailBody(campaign: campaign),
-              loading: () => const Padding(
-                padding: EdgeInsets.only(top: 140),
-                child: Center(child: CircularProgressIndicator()),
-              ),
-              error: (error, stackTrace) => const _CampaignNotFound(),
+    final topInset = MediaQuery.of(context).padding.top;
+
+    // Hero photo runs edge-to-edge behind the status bar (see the
+    // Stack below, no top SafeArea) instead of sitting under a plain
+    // themed strip -- claims more of the page instead of reading
+    // boxed-in. Always white icons, not following light/dark theme --
+    // legibility against an arbitrary uploaded banner (which can be
+    // anything, including a light one) is handled by _CampaignHero's
+    // own fixed top gradient instead, not by switching icon color.
+    return AnnotatedRegion<SystemUiOverlayStyle>(
+      value: SystemUiOverlayStyle.light,
+      child: PopScope(
+        // Same fix as ProductDetailScreen: a top-level route reached
+        // via context.go() (replace, not push) usually has no Flutter
+        // route to pop, so an unhandled hardware/gesture back press
+        // falls through to the OS and closes the app entirely instead
+        // of navigating. Intercepting it here runs the exact same "go
+        // back if possible, else go to my role's home" logic the
+        // on-screen back button already uses.
+        canPop: false,
+        onPopInvokedWithResult: (didPop, result) {
+          if (didPop) return;
+          _goBack(context, ref);
+        },
+        child: Scaffold(
+          body: SafeArea(
+            top: false,
+            bottom: false,
+            child: Stack(
+              children: [
+                campaignsAsync.when(
+                  data: (_) => campaign == null
+                      ? const _CampaignNotFound()
+                      : _CampaignDetailBody(campaign: campaign),
+                  loading: () => Padding(
+                    padding: EdgeInsets.only(top: topInset + 140),
+                    child: const Center(child: CircularProgressIndicator()),
+                  ),
+                  error: (error, stackTrace) => const _CampaignNotFound(),
+                ),
+                Positioned(
+                  top: topInset + 8,
+                  left: 12,
+                  child: _FloatingIconButton(
+                    icon: Icons.arrow_back,
+                    onTap: () => _goBack(context, ref),
+                  ),
+                ),
+              ],
             ),
-            Positioned(
-              top: 12,
-              left: 12,
-              child: _FloatingIconButton(
-                icon: Icons.arrow_back,
-                onTap: () {
-                  if (context.canPop()) {
-                    context.pop();
-                    return;
-                  }
-                  // Reached via CampaignTile's context.go(), which
-                  // replaces the route instead of pushing -- there's
-                  // usually no back stack at all here, so this fallback
-                  // fires on essentially every visit. It has to know
-                  // which role is actually signed in: this screen is
-                  // shared by both, and a wholesaler landing on
-                  // /mechanic/home by mistake is a real, confusing bug,
-                  // not just an edge case.
-                  final role = ref.read(authControllerProvider).profile?.role;
-                  context.go(
-                    role == AppRole.wholesaler
-                        ? '/wholesaler/home'
-                        : '/mechanic/home',
-                  );
-                },
-              ),
-            ),
-          ],
+          ),
         ),
       ),
+    );
+  }
+
+  void _goBack(BuildContext context, WidgetRef ref) {
+    if (context.canPop()) {
+      context.pop();
+      return;
+    }
+    // Reached via CampaignTile's context.go(), which replaces the
+    // route instead of pushing -- there's usually no back stack at
+    // all here. This screen is shared by both roles, so the fallback
+    // has to know who's actually signed in rather than always landing
+    // a wholesaler on the mechanic home screen.
+    final role = ref.read(authControllerProvider).profile?.role;
+    context.go(
+      role == AppRole.wholesaler ? '/wholesaler/home' : '/mechanic/home',
     );
   }
 }
@@ -119,21 +141,24 @@ class _CampaignDetailBody extends StatelessWidget {
               ],
               _StatRow(campaign: campaign),
               const SizedBox(height: AppSpacing.lg),
-              if (campaign.description != null) ...[
-                Text(
-                  'About this campaign',
-                  style: Theme.of(context).textTheme.titleMedium,
+              Text(
+                'About this campaign',
+                style: Theme.of(context).textTheme.titleMedium,
+              ),
+              const SizedBox(height: AppSpacing.sm),
+              Text(
+                (campaign.description?.trim().isNotEmpty ?? false)
+                    ? campaign.description!.trim()
+                    : 'No description added yet.',
+                style: Theme.of(context).textTheme.bodyMedium?.copyWith(
+                  color: AppColors.mutedTextOf(context),
+                  height: 1.5,
+                  fontStyle: (campaign.description?.trim().isNotEmpty ?? false)
+                      ? FontStyle.normal
+                      : FontStyle.italic,
                 ),
-                const SizedBox(height: AppSpacing.sm),
-                Text(
-                  campaign.description!,
-                  style: Theme.of(context).textTheme.bodyMedium?.copyWith(
-                    color: AppColors.mutedTextOf(context),
-                    height: 1.5,
-                  ),
-                ),
-                const SizedBox(height: AppSpacing.lg),
-              ],
+              ),
+              const SizedBox(height: AppSpacing.lg),
               Text(
                 'How to participate',
                 style: Theme.of(context).textTheme.titleMedium,
@@ -174,7 +199,7 @@ class _CampaignHero extends StatelessWidget {
     return ClipRRect(
       borderRadius: const BorderRadius.vertical(bottom: Radius.circular(28)),
       child: SizedBox(
-        height: 220,
+        height: 300,
         width: double.infinity,
         child: Stack(
           fit: StackFit.expand,
@@ -187,6 +212,26 @@ class _CampaignHero extends StatelessWidget {
                         _placeholder(),
                   )
                 : _placeholder(),
+            // Fixed dark strip behind the status bar, independent of
+            // whatever the campaign banner actually looks like -- a
+            // light-background banner would otherwise make the white
+            // status bar icons unreadable, same issue found on
+            // Product Detail with a white-background product photo.
+            const Positioned(
+              top: 0,
+              left: 0,
+              right: 0,
+              height: 80,
+              child: DecoratedBox(
+                decoration: BoxDecoration(
+                  gradient: LinearGradient(
+                    begin: Alignment.topCenter,
+                    end: Alignment.bottomCenter,
+                    colors: [Colors.black38, Colors.transparent],
+                  ),
+                ),
+              ),
+            ),
             Positioned(
               left: 14,
               bottom: 14,
@@ -420,29 +465,36 @@ class _CampaignNotFound extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return Padding(
-      padding: const EdgeInsets.fromLTRB(
-        AppSpacing.md,
-        72,
-        AppSpacing.md,
-        AppSpacing.md,
-      ),
-      child: Column(
-        children: [
-          Icon(
-            Icons.campaign_outlined,
-            size: 40,
-            color: AppColors.mutedTextOf(context),
-          ),
-          const SizedBox(height: AppSpacing.sm),
-          Text(
-            'This campaign is no longer available.',
-            textAlign: TextAlign.center,
-            style: Theme.of(context).textTheme.bodyMedium?.copyWith(
+    // Its own SafeArea(top) since the outer Stack deliberately isn't
+    // safe-inset any more (the hero needs to run under the status
+    // bar) -- this state has no hero to do that job for it.
+    return SafeArea(
+      top: true,
+      bottom: false,
+      child: Padding(
+        padding: const EdgeInsets.fromLTRB(
+          AppSpacing.md,
+          56,
+          AppSpacing.md,
+          AppSpacing.md,
+        ),
+        child: Column(
+          children: [
+            Icon(
+              Icons.campaign_outlined,
+              size: 40,
               color: AppColors.mutedTextOf(context),
             ),
-          ),
-        ],
+            const SizedBox(height: AppSpacing.sm),
+            Text(
+              'This campaign is no longer available.',
+              textAlign: TextAlign.center,
+              style: Theme.of(context).textTheme.bodyMedium?.copyWith(
+                color: AppColors.mutedTextOf(context),
+              ),
+            ),
+          ],
+        ),
       ),
     );
   }

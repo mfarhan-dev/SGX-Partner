@@ -7,6 +7,7 @@ import '../../core/utils/money_formatter.dart';
 import '../campaigns/domain/active_campaign.dart';
 import '../mock/sgx_mock_data.dart';
 import '../models/money_amount.dart';
+import '../products/domain/catalog_product.dart';
 
 class WalletHeroCard extends StatelessWidget {
   const WalletHeroCard({
@@ -168,74 +169,115 @@ class _GlassValue extends StatelessWidget {
   }
 }
 
+/// Grid card for the real product catalog -- a large square photo (or
+/// a plain placeholder when a product has none uploaded yet) taking
+/// most of the card, brand, name, and a small in-stock indicator dot.
+/// No price anywhere: get_catalog_products() doesn't return one, per
+/// instruction. Modeled on Faire Wholesale's own B2B catalog grid --
+/// the closest real reference for "one photo card, wholesale ordering
+/// context" of everything checked.
 class ProductTile extends StatelessWidget {
   const ProductTile({super.key, required this.product});
 
-  final MockProduct product;
+  final CatalogProduct product;
 
   @override
   Widget build(BuildContext context) {
     return InkWell(
       borderRadius: BorderRadius.circular(14),
-      onTap: () => context.go('/products/${product.id}'),
+      // push, not go: go() replaces the route with no back stack behind
+      // it, which is exactly why back from the detail screen was
+      // landing on Home instead of returning to this grid. push()
+      // actually keeps this screen underneath, so back returns here.
+      onTap: () => context.push('/products/${product.id}'),
       child: Ink(
         decoration: BoxDecoration(
-          color: Theme.of(context).colorScheme.surface,
+          color: AppColors.surfaceOf(context),
           borderRadius: BorderRadius.circular(14),
-          border: Border.all(color: AppColors.outline),
+          border: Border.all(color: AppColors.outlineOf(context)),
         ),
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            Container(
-              height: 110,
-              width: double.infinity,
-              decoration: const BoxDecoration(
-                color: AppColors.surfaceContainer,
-                borderRadius: BorderRadius.vertical(top: Radius.circular(14)),
+            ClipRRect(
+              borderRadius: const BorderRadius.vertical(
+                top: Radius.circular(14),
               ),
-              child: Icon(
-                product.icon,
-                size: 46,
-                color: AppColors.primary.withValues(alpha: 0.78),
+              child: AspectRatio(
+                aspectRatio: 1,
+                child: product.imageUrl != null
+                    ? Image.network(
+                        product.imageUrl!,
+                        fit: BoxFit.cover,
+                        errorBuilder: (context, error, stackTrace) =>
+                            _placeholder(context),
+                      )
+                    : _placeholder(context),
               ),
             ),
-            Expanded(
-              child: Padding(
-                padding: const EdgeInsets.fromLTRB(16, 12, 16, 16),
-                child: Column(
-                  mainAxisAlignment: MainAxisAlignment.end,
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
+            Padding(
+              padding: const EdgeInsets.fromLTRB(12, 10, 12, 12),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  if (product.brand != null) ...[
                     Text(
-                      product.brand.toUpperCase(),
+                      product.brand!.toUpperCase(),
                       style: Theme.of(context).textTheme.labelSmall?.copyWith(
                         color: AppColors.primary,
                         fontWeight: FontWeight.w800,
                       ),
                     ),
-                    const SizedBox(height: 6),
-                    Text(
-                      product.name,
-                      maxLines: 2,
-                      overflow: TextOverflow.ellipsis,
-                      style: Theme.of(
-                        context,
-                      ).textTheme.titleSmall?.copyWith(height: 1.25),
-                    ),
-                    const SizedBox(height: 6),
-                    Text(
-                      product.code,
-                      style: Theme.of(context).textTheme.bodySmall?.copyWith(
-                        color: AppColors.mutedText,
-                        fontFeatures: const [FontFeature.tabularFigures()],
-                      ),
-                    ),
+                    const SizedBox(height: 4),
                   ],
-                ),
+                  Text(
+                    product.name,
+                    maxLines: 2,
+                    overflow: TextOverflow.ellipsis,
+                    style: Theme.of(
+                      context,
+                    ).textTheme.titleSmall?.copyWith(height: 1.25),
+                  ),
+                  const SizedBox(height: 6),
+                  Row(
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      Container(
+                        width: 7,
+                        height: 7,
+                        decoration: BoxDecoration(
+                          shape: BoxShape.circle,
+                          color: product.inStock
+                              ? AppColors.success
+                              : AppColors.error,
+                        ),
+                      ),
+                      const SizedBox(width: 5),
+                      Text(
+                        product.inStock ? 'In stock' : 'Out of stock',
+                        style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                          color: AppColors.mutedTextOf(context),
+                        ),
+                      ),
+                    ],
+                  ),
+                ],
               ),
             ),
           ],
+        ),
+      ),
+    );
+  }
+
+  static Widget _placeholder(BuildContext context) {
+    return Container(
+      color: AppColors.surfaceContainerOf(context),
+      child: Center(
+        child: Icon(
+          Icons.inventory_2_outlined,
+          size: 36,
+          color: AppColors.mutedTextOf(context),
         ),
       ),
     );
@@ -261,7 +303,11 @@ class CampaignTile extends StatelessWidget {
   Widget build(BuildContext context) {
     return InkWell(
       borderRadius: BorderRadius.circular(16),
-      onTap: () => context.go('/campaigns/${campaign.id}'),
+      // push, not go: same fix as ProductTile -- go() replaces the
+      // route with no back stack, which is why back from the detail
+      // screen was landing on Home instead of returning to wherever
+      // this card was tapped from (Home's carousel, or the full list).
+      onTap: () => context.push('/campaigns/${campaign.id}'),
       child: ClipRRect(
         borderRadius: BorderRadius.circular(16),
         child: AspectRatio(

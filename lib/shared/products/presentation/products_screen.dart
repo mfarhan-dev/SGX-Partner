@@ -1,33 +1,44 @@
 import 'package:flutter/material.dart';
-import 'package:go_router/go_router.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
 
-import '../../mock/sgx_mock_data.dart';
+import '../../../app/theme/app_colors.dart';
+import '../data/catalog_products_providers.dart';
+import '../domain/catalog_product.dart';
 import '../../widgets/sgx_cards.dart';
 
-class ProductsScreen extends StatefulWidget {
+/// Real catalog grid -- fetched once per session via
+/// catalogProductsProvider, filtered client-side by search text and
+/// category chip (both derived from the fetched list itself, not a
+/// separate categories query: with only a handful of real products
+/// today, a chip for a category that has zero products in it would
+/// just look broken when tapped).
+class ProductsScreen extends ConsumerStatefulWidget {
   const ProductsScreen({super.key});
 
   @override
-  State<ProductsScreen> createState() => _ProductsScreenState();
+  ConsumerState<ProductsScreen> createState() => _ProductsScreenState();
 }
 
-class _ProductsScreenState extends State<ProductsScreen> {
+class _ProductsScreenState extends ConsumerState<ProductsScreen> {
   String _query = '';
+  String? _category;
+
+  List<CatalogProduct> _filter(List<CatalogProduct> all) {
+    final query = _query.trim().toLowerCase();
+    return all.where((item) {
+      final matchesCategory = _category == null || item.category == _category;
+      final matchesQuery =
+          query.isEmpty ||
+          item.name.toLowerCase().contains(query) ||
+          (item.brand?.toLowerCase().contains(query) ?? false) ||
+          (item.category?.toLowerCase().contains(query) ?? false);
+      return matchesCategory && matchesQuery;
+    }).toList();
+  }
 
   @override
   Widget build(BuildContext context) {
-    final query = _query.trim().toLowerCase();
-    final products = query.isEmpty
-        ? mockProducts
-        : mockProducts
-              .where(
-                (item) =>
-                    item.name.toLowerCase().contains(query) ||
-                    item.brand.toLowerCase().contains(query) ||
-                    item.category.toLowerCase().contains(query) ||
-                    item.code.toLowerCase().contains(query),
-              )
-              .toList();
+    final productsAsync = ref.watch(catalogProductsProvider);
 
     return Scaffold(
       appBar: AppBar(
@@ -35,59 +46,99 @@ class _ProductsScreenState extends State<ProductsScreen> {
         actions: [
           IconButton(
             tooltip: 'Search',
-            onPressed: _openSearch,
+            onPressed: productsAsync.value == null
+                ? null
+                : () => _openSearch(productsAsync.value!),
             icon: const Icon(Icons.search),
-          ),
-          IconButton(
-            tooltip: 'Filters',
-            onPressed: _showFilters,
-            icon: const Icon(Icons.tune),
           ),
         ],
       ),
       body: SafeArea(
-        child: ListView(
-          padding: const EdgeInsets.all(16),
-          children: [
-            SizedBox(
-              height: 36,
-              child: ListView(
-                scrollDirection: Axis.horizontal,
-                children: const [
-                  _CategoryChip(label: 'All', selected: true),
-                  _CategoryChip(label: 'Engine Oil'),
-                  _CategoryChip(label: 'Spark Plugs'),
-                  _CategoryChip(label: 'Filters'),
-                  _CategoryChip(label: 'Tires'),
-                  _CategoryChip(label: 'Chains'),
-                  _CategoryChip(label: 'Battery'),
-                ],
+        child: productsAsync.when(
+          data: (products) => _buildGrid(context, products),
+          loading: () => const Center(child: CircularProgressIndicator()),
+          error: (error, stackTrace) => Center(
+            child: Padding(
+              padding: const EdgeInsets.all(24),
+              child: Text(
+                'Could not load products. Pull to refresh or try again later.',
+                textAlign: TextAlign.center,
+                style: TextStyle(color: AppColors.mutedTextOf(context)),
               ),
             ),
-            const SizedBox(height: 16),
-            GridView.builder(
-              shrinkWrap: true,
-              physics: const NeverScrollableScrollPhysics(),
-              itemCount: products.length,
-              gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
-                crossAxisCount: 2,
-                crossAxisSpacing: 12,
-                mainAxisSpacing: 12,
-                childAspectRatio: 0.72,
-              ),
-              itemBuilder: (context, index) =>
-                  ProductTile(product: products[index]),
-            ),
-          ],
+          ),
         ),
       ),
     );
   }
 
-  Future<void> _openSearch() async {
+  Widget _buildGrid(BuildContext context, List<CatalogProduct> allProducts) {
+    final categories = <String>{
+      for (final item in allProducts)
+        if (item.category != null) item.category!,
+    }.toList()..sort();
+    final filtered = _filter(allProducts);
+
+    return ListView(
+      padding: const EdgeInsets.all(16),
+      children: [
+        if (categories.isNotEmpty) ...[
+          SizedBox(
+            height: 36,
+            child: ListView(
+              scrollDirection: Axis.horizontal,
+              children: [
+                _CategoryChip(
+                  label: 'All',
+                  selected: _category == null,
+                  onTap: () => setState(() => _category = null),
+                ),
+                for (final category in categories)
+                  _CategoryChip(
+                    label: category,
+                    selected: _category == category,
+                    onTap: () => setState(() => _category = category),
+                  ),
+              ],
+            ),
+          ),
+          const SizedBox(height: 16),
+        ],
+        if (filtered.isEmpty)
+          Padding(
+            padding: const EdgeInsets.symmetric(vertical: 48),
+            child: Center(
+              child: Text(
+                allProducts.isEmpty ? 'No products yet.' : 'No products found.',
+                style: TextStyle(color: AppColors.mutedTextOf(context)),
+              ),
+            ),
+          )
+        else
+          GridView.builder(
+            shrinkWrap: true,
+            physics: const NeverScrollableScrollPhysics(),
+            itemCount: filtered.length,
+            gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
+              crossAxisCount: 2,
+              crossAxisSpacing: 12,
+              mainAxisSpacing: 12,
+              childAspectRatio: 0.66,
+            ),
+            itemBuilder: (context, index) =>
+                ProductTile(product: filtered[index]),
+          ),
+      ],
+    );
+  }
+
+  Future<void> _openSearch(List<CatalogProduct> products) async {
     final selectedQuery = await showSearch<String?>(
       context: context,
-      delegate: _ProductSearchDelegate(initialQuery: _query),
+      delegate: _ProductSearchDelegate(
+        initialQuery: _query,
+        products: products,
+      ),
       useRootNavigator: true,
     );
 
@@ -97,56 +148,17 @@ class _ProductsScreenState extends State<ProductsScreen> {
 
     setState(() => _query = selectedQuery);
   }
-
-  void _showFilters() {
-    showModalBottomSheet<void>(
-      context: context,
-      showDragHandle: true,
-      builder: (context) {
-        return Padding(
-          padding: const EdgeInsets.fromLTRB(16, 0, 16, 24),
-          child: Column(
-            mainAxisSize: MainAxisSize.min,
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              Text(
-                'Filter products',
-                style: Theme.of(context).textTheme.titleLarge,
-              ),
-              const SizedBox(height: 12),
-              Wrap(
-                spacing: 8,
-                runSpacing: 8,
-                children: const [
-                  _CategoryChip(label: 'All', selected: true),
-                  _CategoryChip(label: 'Engine Oil'),
-                  _CategoryChip(label: 'Spark Plugs'),
-                  _CategoryChip(label: 'Filters'),
-                  _CategoryChip(label: 'Tires'),
-                  _CategoryChip(label: 'Chains'),
-                  _CategoryChip(label: 'Battery'),
-                ],
-              ),
-              const SizedBox(height: 16),
-              SizedBox(
-                width: double.infinity,
-                child: FilledButton(
-                  onPressed: () => context.pop(),
-                  child: const Text('Apply'),
-                ),
-              ),
-            ],
-          ),
-        );
-      },
-    );
-  }
 }
 
 class _ProductSearchDelegate extends SearchDelegate<String?> {
-  _ProductSearchDelegate({required String initialQuery}) {
+  _ProductSearchDelegate({
+    required String initialQuery,
+    required this.products,
+  }) {
     query = initialQuery;
   }
+
+  final List<CatalogProduct> products;
 
   @override
   String get searchFieldLabel => 'Search products...';
@@ -201,6 +213,7 @@ class _ProductSearchDelegate extends SearchDelegate<String?> {
   Widget buildResults(BuildContext context) {
     return _ProductSearchResults(
       query: query,
+      products: products,
       onSelected: (value) => close(context, value),
     );
   }
@@ -209,29 +222,36 @@ class _ProductSearchDelegate extends SearchDelegate<String?> {
   Widget buildSuggestions(BuildContext context) {
     return _ProductSearchResults(
       query: query,
+      products: products,
       onSelected: (value) => close(context, value),
     );
   }
 }
 
 class _ProductSearchResults extends StatelessWidget {
-  const _ProductSearchResults({required this.query, required this.onSelected});
+  const _ProductSearchResults({
+    required this.query,
+    required this.products,
+    required this.onSelected,
+  });
 
   final String query;
+  final List<CatalogProduct> products;
   final ValueChanged<String> onSelected;
 
   @override
   Widget build(BuildContext context) {
     final normalizedQuery = query.trim().toLowerCase();
     final results = normalizedQuery.isEmpty
-        ? mockProducts
-        : mockProducts
+        ? products
+        : products
               .where(
                 (item) =>
                     item.name.toLowerCase().contains(normalizedQuery) ||
-                    item.brand.toLowerCase().contains(normalizedQuery) ||
-                    item.category.toLowerCase().contains(normalizedQuery) ||
-                    item.code.toLowerCase().contains(normalizedQuery),
+                    (item.brand?.toLowerCase().contains(normalizedQuery) ??
+                        false) ||
+                    (item.category?.toLowerCase().contains(normalizedQuery) ??
+                        false),
               )
               .toList();
     final colorScheme = Theme.of(context).colorScheme;
@@ -265,10 +285,20 @@ class _ProductSearchResults extends StatelessWidget {
           leading: CircleAvatar(
             backgroundColor: colorScheme.primaryContainer,
             foregroundColor: colorScheme.onPrimaryContainer,
-            child: Icon(product.icon),
+            backgroundImage: product.imageUrl != null
+                ? NetworkImage(product.imageUrl!)
+                : null,
+            child: product.imageUrl == null
+                ? const Icon(Icons.inventory_2_outlined)
+                : null,
           ),
           title: Text(product.name),
-          subtitle: Text('${product.brand} · ${product.code}'),
+          subtitle: Text(
+            [
+              product.brand,
+              product.category,
+            ].where((part) => part != null && part.isNotEmpty).join(' · '),
+          ),
           onTap: () => onSelected(product.name),
         );
       },
@@ -277,10 +307,15 @@ class _ProductSearchResults extends StatelessWidget {
 }
 
 class _CategoryChip extends StatelessWidget {
-  const _CategoryChip({required this.label, this.selected = false});
+  const _CategoryChip({
+    required this.label,
+    required this.selected,
+    required this.onTap,
+  });
 
   final String label;
   final bool selected;
+  final VoidCallback onTap;
 
   @override
   Widget build(BuildContext context) {
@@ -289,7 +324,7 @@ class _CategoryChip extends StatelessWidget {
       child: ChoiceChip(
         label: Text(label),
         selected: selected,
-        onSelected: (_) {},
+        onSelected: (_) => onTap(),
       ),
     );
   }

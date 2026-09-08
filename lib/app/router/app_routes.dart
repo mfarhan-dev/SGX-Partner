@@ -79,18 +79,21 @@ class AppRoutes {
           campaignId: state.pathParameters['campaignId'] ?? '',
         ),
       ),
+      // Same reasoning again: reached by tapping a product card, not a
+      // tab -- /products (the grid) stays in the shell below since
+      // that one IS a tab.
+      GoRoute(
+        path: '/products/:productId',
+        builder: (_, state) => ProductDetailScreen(
+          productId: state.pathParameters['productId'] ?? '',
+        ),
+      ),
       ShellRoute(
         builder: (_, __, child) => SgxPartnersShell(child: child),
         routes: [
           GoRoute(
             path: '/products',
             builder: (_, __) => const ProductsScreen(),
-          ),
-          GoRoute(
-            path: '/products/:productId',
-            builder: (_, state) => ProductDetailScreen(
-              productId: state.pathParameters['productId'] ?? '',
-            ),
           ),
           GoRoute(
             path: '/notifications',
