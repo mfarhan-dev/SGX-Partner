@@ -7,6 +7,7 @@ import '../../../../app/theme/app_colors.dart';
 import '../../../../app/theme/app_spacing.dart';
 import '../data/khata_ledger_providers.dart';
 import '../domain/khata_entry.dart';
+import 'widgets/ledger_screen_skeleton.dart';
 
 enum _LedgerFilter { all, purchases, payments }
 
@@ -68,8 +69,7 @@ class _WholesalerLedgerScreenState
               data: (entries) => _content(context, entries, topInset),
               loading: () => SingleChildScrollView(
                 physics: const AlwaysScrollableScrollPhysics(),
-                padding: EdgeInsets.only(top: topInset + 140),
-                child: const Center(child: CircularProgressIndicator()),
+                child: LedgerScreenSkeleton(topInset: topInset),
               ),
               error: (error, stackTrace) => SingleChildScrollView(
                 physics: const AlwaysScrollableScrollPhysics(),
