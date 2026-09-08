@@ -69,6 +69,16 @@ class AppRoutes {
         path: '/wholesaler/profile/edit',
         builder: (_, __) => const EditWholesalerProfileScreen(),
       ),
+      // Same reasoning again: reached by tapping a campaign card (or
+      // "See all"), not a tab -- the bottom nav and QR FAB were
+      // leaking onto both the list and the detail screen.
+      GoRoute(path: '/campaigns', builder: (_, __) => const CampaignsScreen()),
+      GoRoute(
+        path: '/campaigns/:campaignId',
+        builder: (_, state) => CampaignDetailScreen(
+          campaignId: state.pathParameters['campaignId'] ?? '',
+        ),
+      ),
       ShellRoute(
         builder: (_, __, child) => SgxPartnersShell(child: child),
         routes: [
@@ -80,16 +90,6 @@ class AppRoutes {
             path: '/products/:productId',
             builder: (_, state) => ProductDetailScreen(
               productId: state.pathParameters['productId'] ?? '',
-            ),
-          ),
-          GoRoute(
-            path: '/campaigns',
-            builder: (_, __) => const CampaignsScreen(),
-          ),
-          GoRoute(
-            path: '/campaigns/:campaignId',
-            builder: (_, state) => CampaignDetailScreen(
-              campaignId: state.pathParameters['campaignId'] ?? '',
             ),
           ),
           GoRoute(

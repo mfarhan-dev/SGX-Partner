@@ -33,4 +33,33 @@ class AppColors {
   static const darkText = Color(0xFFF2ECE4);
   static const darkMutedText = Color(0xFFA79C8F);
   static const darkOutline = Color(0xFF2C2723);
+
+  // Theme-aware lookups -- for the handful of places that need an
+  // explicit color (a Container/Icon/TextStyle override rather than
+  // pulling from Theme.of(context).textTheme, which already resolves
+  // correctly per theme via AppTheme's textTheme). Using the plain
+  // light-only constants (text, mutedText, surface, outline,
+  // background) directly outside app/theme is the bug this fixes --
+  // they never change for dark mode, so text can end up dark-on-dark
+  // or the background stays cream regardless of the device's theme.
+  static bool isDark(BuildContext context) =>
+      Theme.of(context).brightness == Brightness.dark;
+
+  static Color textOf(BuildContext context) =>
+      isDark(context) ? darkText : text;
+
+  static Color mutedTextOf(BuildContext context) =>
+      isDark(context) ? darkMutedText : mutedText;
+
+  static Color surfaceOf(BuildContext context) =>
+      isDark(context) ? darkSurface : surface;
+
+  static Color surfaceContainerOf(BuildContext context) =>
+      isDark(context) ? darkSurfaceContainer : surfaceContainer;
+
+  static Color outlineOf(BuildContext context) =>
+      isDark(context) ? darkOutline : outline;
+
+  static Color backgroundOf(BuildContext context) =>
+      isDark(context) ? darkBackground : background;
 }
