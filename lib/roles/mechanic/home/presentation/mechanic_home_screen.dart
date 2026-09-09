@@ -4,24 +4,14 @@ import 'package:go_router/go_router.dart';
 
 import '../../../../app/theme/app_spacing.dart';
 import '../../../../shared/campaigns/data/active_campaigns_providers.dart';
-import '../../../../shared/mock/sgx_mock_data.dart';
 import '../../../../shared/models/money_amount.dart';
 import '../../../../shared/widgets/partner_greeting.dart';
 import '../../../../shared/widgets/sgx_cards.dart';
+import '../../../../shared/withdrawals/data/withdrawals_providers.dart';
 import '../../profile/data/mechanic_profile_providers.dart';
 
 class MechanicHomeScreen extends ConsumerWidget {
   const MechanicHomeScreen({super.key});
-
-  static const _availableBalance = MoneyAmount(cents: 428500);
-  static const _activeWithdrawal = MockWithdrawal(
-    id: 'wd-001',
-    amount: MoneyAmount(cents: 150000),
-    method: 'JazzCash',
-    date: 'Submitted today',
-    status: 'Pending',
-    note: 'SGX is reviewing the request. No action is required right now.',
-  );
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
@@ -30,6 +20,33 @@ class MechanicHomeScreen extends ConsumerWidget {
     // person instead of the old hardcoded "Muhammad Farhan" mock.
     final profileAsync = ref.watch(mechanicProfileDataProvider);
     final campaignsAsync = ref.watch(activeCampaignsProvider);
+    final withdrawalsAsync = ref.watch(withdrawalsListProvider);
+
+    // Real running balance -- credited the instant a QR code is scanned
+    // (see scan_qr_code()/credit_points_on_qr_scan on the database
+    // side), never summed client-side. Rupees on the wire, converted
+    // to MoneyAmount's cents.
+    final pointsBalance = profileAsync.value?.pointsBalance ?? 0;
+    final available = MoneyAmount(cents: pointsBalance * 100);
+
+    // "Pending" is real now: the sum of withdrawals already deducted
+    // from points_balance (request_withdrawal() deducts immediately)
+    // but not yet finalized -- i.e. every non-terminal status.
+    // `lifetime` still equals `available` -- points_balance has no
+    // separate never-decreasing counter yet, see the field's own doc
+    // comment on MechanicProfileData.
+    final withdrawals = withdrawalsAsync.value ?? const [];
+    final pendingCents = withdrawals
+        .where((w) => !w.status.isTerminal)
+        .fold<int>(0, (sum, w) => sum + w.amount.cents);
+    final pending = MoneyAmount(cents: pendingCents);
+
+    // The single most recent non-terminal withdrawal, if any -- shown
+    // as Home's status banner. Nothing renders here until this partner
+    // has actually requested a withdrawal. withdrawalsListProvider
+    // already orders newest-first, so this is simply the first match.
+    final nonTerminal = withdrawals.where((w) => !w.status.isTerminal);
+    final activeWithdrawal = nonTerminal.isEmpty ? null : nonTerminal.first;
 
     return Scaffold(
       appBar: AppBar(
@@ -60,18 +77,20 @@ class MechanicHomeScreen extends ConsumerWidget {
           padding: const EdgeInsets.all(AppSpacing.md),
           children: [
             WalletHeroCard(
-              available: _availableBalance,
-              pending: const MoneyAmount(cents: 150000),
-              lifetime: const MoneyAmount(cents: 2854000),
+              available: available,
+              pending: pending,
+              lifetime: available,
               compact: true,
-              onWithdraw: () => context.go('/mechanic/withdrawals/new'),
+              onWithdraw: () => context.push('/mechanic/withdrawals/new'),
             ),
-            const SizedBox(height: AppSpacing.md),
-            const WithdrawalStatusCard(
-              withdrawal: _activeWithdrawal,
-              routePrefix: '/mechanic/withdrawals',
-              availableBalance: _availableBalance,
-            ),
+            if (activeWithdrawal != null) ...[
+              const SizedBox(height: AppSpacing.md),
+              WithdrawalStatusCard(
+                withdrawal: activeWithdrawal,
+                routePrefix: '/mechanic/withdrawals',
+                availableBalance: available,
+              ),
+            ],
             const SizedBox(height: AppSpacing.md),
             CampaignCarousel(campaigns: campaignsAsync.value ?? const []),
           ],

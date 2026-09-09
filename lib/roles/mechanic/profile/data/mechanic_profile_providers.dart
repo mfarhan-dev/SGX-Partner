@@ -39,7 +39,7 @@ final mechanicProfileDataProvider = FutureProvider<MechanicProfileData>((
   final row = await client
       .from('mechanics')
       .select(
-        'full_name, phone, area, workshop_name, address, cnic, photo_storage_path',
+        'full_name, phone, area, workshop_name, address, cnic, photo_storage_path, points_balance',
       )
       .eq('profile_id', uid)
       .single();
@@ -69,6 +69,7 @@ final mechanicProfileDataProvider = FutureProvider<MechanicProfileData>((
     fullName: row['full_name'] as String,
     phone: row['phone'] as String,
     area: row['area'] as String,
+    pointsBalance: (row['points_balance'] as num).toInt(),
     workshopName: row['workshop_name'] as String?,
     address: row['address'] as String?,
     cnic: row['cnic'] as String?,

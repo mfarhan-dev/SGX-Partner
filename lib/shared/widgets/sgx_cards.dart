@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
+import 'package:intl/intl.dart';
 
 import '../../app/theme/app_colors.dart';
 import '../../app/theme/app_spacing.dart';
@@ -8,6 +9,8 @@ import '../campaigns/domain/active_campaign.dart';
 import '../mock/sgx_mock_data.dart';
 import '../models/money_amount.dart';
 import '../products/domain/catalog_product.dart';
+import '../withdrawals/domain/withdrawal.dart';
+import '../withdrawals/domain/withdrawal_status.dart';
 
 class WalletHeroCard extends StatelessWidget {
   const WalletHeroCard({
@@ -502,6 +505,11 @@ class TransactionRow extends StatelessWidget {
   }
 }
 
+/// Home's "current withdrawal" banner. Only ever shown for a withdrawal
+/// that is NOT terminal (pending/paymentSent/disputed) -- the caller is
+/// responsible for picking that row and not rendering this at all when
+/// there isn't one, so a partner who has never requested a withdrawal
+/// sees nothing here instead of stale/fake status.
 class WithdrawalStatusCard extends StatelessWidget {
   const WithdrawalStatusCard({
     super.key,
@@ -510,22 +518,21 @@ class WithdrawalStatusCard extends StatelessWidget {
     required this.availableBalance,
   });
 
-  final MockWithdrawal withdrawal;
+  final Withdrawal withdrawal;
   final String routePrefix;
   final MoneyAmount availableBalance;
 
   @override
   Widget build(BuildContext context) {
-    final color = _statusColor(withdrawal.status);
-    final paymentSent = withdrawal.status == 'Payment Sent';
-    final completed = withdrawal.status == 'Confirmed';
-    final title = switch (withdrawal.status) {
-      'Payment Sent' => 'Payment sent by SGX',
-      'Confirmed' => 'Withdrawal completed',
-      'Disputed' => 'Withdrawal needs review',
+    final status = withdrawal.status;
+    final color = _statusColor(status);
+    final paymentSent = status == WithdrawalStatus.paymentSent;
+    final title = switch (status) {
+      WithdrawalStatus.paymentSent => 'Payment sent by SGX',
+      WithdrawalStatus.disputed => 'Withdrawal needs review',
       _ => 'Withdrawal requested',
     };
-    final statusLabel = paymentSent ? 'Confirm' : withdrawal.status;
+    final statusLabel = paymentSent ? 'Confirm' : status.label;
     final remaining = MoneyAmount(
       cents: (availableBalance.cents - withdrawal.amount.cents).clamp(
         0,
@@ -535,10 +542,10 @@ class WithdrawalStatusCard extends StatelessWidget {
 
     return Card(
       margin: EdgeInsets.zero,
-      color: paymentSent || completed ? null : AppColors.warningContainer,
+      color: paymentSent ? null : AppColors.warningContainer,
       child: InkWell(
         borderRadius: BorderRadius.circular(12),
-        onTap: () => context.go('$routePrefix/${withdrawal.id}'),
+        onTap: () => context.push('$routePrefix/${withdrawal.id}'),
         child: Padding(
           padding: const EdgeInsets.all(AppSpacing.md),
           child: Column(
@@ -549,7 +556,7 @@ class WithdrawalStatusCard extends StatelessWidget {
                 children: [
                   CircleAvatar(
                     backgroundColor: color.withValues(alpha: 0.13),
-                    child: Icon(_statusIcon(withdrawal.status), color: color),
+                    child: Icon(_statusIcon(status), color: color),
                   ),
                   const SizedBox(width: AppSpacing.sm),
                   Expanded(
@@ -569,7 +576,7 @@ class WithdrawalStatusCard extends StatelessWidget {
                         ),
                         const SizedBox(height: 4),
                         Text(
-                          '${MoneyFormatter.format(withdrawal.amount)} · ${withdrawal.method} · ${withdrawal.date}',
+                          '${MoneyFormatter.format(withdrawal.amount)} · ${withdrawal.method.label} · ${_formatDate(withdrawal.requestedAt)}',
                           style: Theme.of(context).textTheme.bodySmall
                               ?.copyWith(color: AppColors.mutedText),
                         ),
@@ -602,9 +609,15 @@ class WithdrawalStatusCard extends StatelessWidget {
               ),
               const SizedBox(height: AppSpacing.sm),
               Text(
-                paymentSent
-                    ? 'Confirm only after the amount is received.'
-                    : withdrawal.note,
+                switch (status) {
+                  WithdrawalStatus.paymentSent =>
+                    'Confirm only after the amount is received.',
+                  WithdrawalStatus.disputed =>
+                    withdrawal.disputeReason ??
+                        'SGX is reviewing this payment problem.',
+                  _ =>
+                    'SGX is reviewing the request. No action is required right now.',
+                },
                 style: Theme.of(
                   context,
                 ).textTheme.bodySmall?.copyWith(color: AppColors.mutedText),
@@ -615,7 +628,7 @@ class WithdrawalStatusCard extends StatelessWidget {
                   width: double.infinity,
                   child: FilledButton(
                     onPressed: () =>
-                        context.go('$routePrefix/${withdrawal.id}'),
+                        context.push('$routePrefix/${withdrawal.id}'),
                     child: const Text('Confirm received'),
                   ),
                 ),
@@ -627,23 +640,39 @@ class WithdrawalStatusCard extends StatelessWidget {
     );
   }
 
-  IconData _statusIcon(String status) {
+  IconData _statusIcon(WithdrawalStatus status) {
     return switch (status) {
-      'Payment Sent' => Icons.send_outlined,
-      'Confirmed' => Icons.check_circle_outline,
-      'Disputed' => Icons.error_outline,
-      _ => Icons.schedule_outlined,
+      WithdrawalStatus.paymentSent => Icons.send_outlined,
+      WithdrawalStatus.confirmed ||
+      WithdrawalStatus.autoConfirmed => Icons.check_circle_outline,
+      WithdrawalStatus.disputed => Icons.error_outline,
+      WithdrawalStatus.refunded => Icons.replay_outlined,
+      WithdrawalStatus.pending => Icons.schedule_outlined,
     };
   }
 
-  Color _statusColor(String status) {
+  Color _statusColor(WithdrawalStatus status) {
     return switch (status) {
-      'Confirmed' || 'Refunded' => AppColors.success,
-      'Disputed' => AppColors.error,
-      'Payment Sent' => AppColors.primary,
-      _ => AppColors.warning,
+      WithdrawalStatus.confirmed ||
+      WithdrawalStatus.autoConfirmed ||
+      WithdrawalStatus.refunded => AppColors.success,
+      WithdrawalStatus.disputed => AppColors.error,
+      WithdrawalStatus.paymentSent => AppColors.primary,
+      WithdrawalStatus.pending => AppColors.warning,
     };
   }
+}
+
+String _formatDate(DateTime dateTime) {
+  final local = dateTime.toLocal();
+  final now = DateTime.now();
+  final isToday =
+      local.year == now.year &&
+      local.month == now.month &&
+      local.day == now.day;
+  return isToday
+      ? 'Today · ${DateFormat('h:mm a').format(local)}'
+      : DateFormat('d MMM y').format(local);
 }
 
 class _WithdrawalAmountBox extends StatelessWidget {
@@ -692,25 +721,36 @@ class WithdrawalCard extends StatelessWidget {
     required this.routePrefix,
   });
 
-  final MockWithdrawal withdrawal;
+  final Withdrawal withdrawal;
   final String routePrefix;
 
   @override
   Widget build(BuildContext context) {
+    final note = switch (withdrawal.status) {
+      WithdrawalStatus.paymentSent =>
+        'Please confirm after checking your balance.',
+      WithdrawalStatus.disputed =>
+        withdrawal.disputeReason ?? 'SGX is reviewing this payment problem.',
+      WithdrawalStatus.confirmed ||
+      WithdrawalStatus.autoConfirmed => 'Payment received and closed.',
+      WithdrawalStatus.refunded => 'Refunded to your balance.',
+      WithdrawalStatus.pending => 'Waiting for SGX to send payment.',
+    };
+
     return Card(
       child: ListTile(
-        onTap: () => context.go('$routePrefix/${withdrawal.id}'),
+        onTap: () => context.push('$routePrefix/${withdrawal.id}'),
         leading: const CircleAvatar(child: Icon(Icons.payments_outlined)),
         title: Text(MoneyFormatter.format(withdrawal.amount)),
         subtitle: Text(
-          '${withdrawal.method} · ${withdrawal.date}\n${withdrawal.note}',
+          '${withdrawal.method.label} · ${_formatDate(withdrawal.requestedAt)}\n$note',
         ),
         isThreeLine: true,
         trailing: Column(
           mainAxisAlignment: MainAxisAlignment.center,
           children: [
             _MiniPill(
-              label: withdrawal.status,
+              label: withdrawal.status.label,
               color: _statusColor(withdrawal.status),
             ),
             const Icon(Icons.chevron_right, size: 18),
@@ -720,12 +760,14 @@ class WithdrawalCard extends StatelessWidget {
     );
   }
 
-  Color _statusColor(String status) {
+  Color _statusColor(WithdrawalStatus status) {
     return switch (status) {
-      'Confirmed' || 'Refunded' => AppColors.success,
-      'Disputed' => AppColors.error,
-      'Payment Sent' => AppColors.primary,
-      _ => AppColors.warning,
+      WithdrawalStatus.confirmed ||
+      WithdrawalStatus.autoConfirmed ||
+      WithdrawalStatus.refunded => AppColors.success,
+      WithdrawalStatus.disputed => AppColors.error,
+      WithdrawalStatus.paymentSent => AppColors.primary,
+      WithdrawalStatus.pending => AppColors.warning,
     };
   }
 }

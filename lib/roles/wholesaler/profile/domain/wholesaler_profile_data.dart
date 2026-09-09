@@ -3,6 +3,7 @@ class WholesalerProfileData {
     required this.ownerName,
     required this.phone,
     required this.area,
+    required this.pointsBalance,
     this.shopName,
     this.address,
     this.cnic,
@@ -16,6 +17,13 @@ class WholesalerProfileData {
   final String? shopName;
   final String? address;
   final String? cnic;
+
+  /// Whole rupees, despite the database column's "points" name --
+  /// credited automatically the moment a mechanic scans a QR code tied
+  /// to one of this wholesaler's invoices. Never summed client-side;
+  /// this is the same running total the database itself maintains,
+  /// guarded against any direct edit.
+  final int pointsBalance;
 
   /// Signed URL into the private wholesaler-photos bucket -- time-limited,
   /// not something to cache past this session (see the repository).

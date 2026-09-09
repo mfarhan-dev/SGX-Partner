@@ -35,7 +35,7 @@ final wholesalerProfileDataProvider = FutureProvider<WholesalerProfileData>((
   final row = await client
       .from('wholesalers')
       .select(
-        'owner_name, phone, area, shop_name, address, cnic, photo_storage_path',
+        'owner_name, phone, area, shop_name, address, cnic, photo_storage_path, points_balance',
       )
       .eq('profile_id', uid)
       .single();
@@ -65,6 +65,7 @@ final wholesalerProfileDataProvider = FutureProvider<WholesalerProfileData>((
     ownerName: row['owner_name'] as String,
     phone: row['phone'] as String,
     area: row['area'] as String,
+    pointsBalance: (row['points_balance'] as num).toInt(),
     shopName: row['shop_name'] as String?,
     address: row['address'] as String?,
     cnic: row['cnic'] as String?,
