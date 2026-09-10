@@ -169,6 +169,20 @@ class _MechanicProfileScreenState extends ConsumerState<MechanicProfileScreen> {
         ],
       ),
       const SizedBox(height: AppSpacing.lg),
+      const _SectionLabel('Payments'),
+      const SizedBox(height: AppSpacing.sm),
+      _SettingsCard(
+        children: [
+          ListTile(
+            leading: const Icon(Icons.payments_outlined),
+            title: const Text('Payout Method'),
+            subtitle: Text(profile?.payoutMethod?.label ?? 'Not set up'),
+            trailing: const Icon(Icons.chevron_right),
+            onTap: () => context.push('/mechanic/payout-method'),
+          ),
+        ],
+      ),
+      const SizedBox(height: AppSpacing.lg),
       const _SectionLabel('General'),
       const SizedBox(height: AppSpacing.sm),
       _SettingsCard(

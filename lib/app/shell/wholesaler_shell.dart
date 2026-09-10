@@ -1,50 +1,59 @@
 import 'package:flutter/material.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 
-class WholesalerShell extends StatelessWidget {
+import 'bottom_chrome_visibility.dart';
+
+class WholesalerShell extends ConsumerWidget {
   const WholesalerShell({super.key, required this.child});
 
   final Widget child;
 
   @override
-  Widget build(BuildContext context) {
+  Widget build(BuildContext context, WidgetRef ref) {
+    // Hidden while a full-bleed bottom sheet (Withdraw Money) occupies
+    // this same screen region -- see bottomChromeHiddenProvider.
+    final chromeHidden = ref.watch(bottomChromeHiddenProvider);
+
     return Scaffold(
       body: child,
-      bottomNavigationBar: BottomAppBar(
-        child: SafeArea(
-          top: false,
-          child: Row(
-            mainAxisAlignment: MainAxisAlignment.spaceAround,
-            children: const [
-              _WholesalerNavItem(
-                icon: Icons.home_outlined,
-                label: 'Home',
-                route: '/wholesaler/home',
+      bottomNavigationBar: chromeHidden
+          ? null
+          : BottomAppBar(
+              child: SafeArea(
+                top: false,
+                child: Row(
+                  mainAxisAlignment: MainAxisAlignment.spaceAround,
+                  children: const [
+                    _WholesalerNavItem(
+                      icon: Icons.home_outlined,
+                      label: 'Home',
+                      route: '/wholesaler/home',
+                    ),
+                    _WholesalerNavItem(
+                      icon: Icons.qr_code_2_outlined,
+                      label: 'QR Progress',
+                      route: '/wholesaler/qr-progress',
+                    ),
+                    _WholesalerNavItem(
+                      icon: Icons.receipt_long_outlined,
+                      label: 'Ledger',
+                      route: '/wholesaler/wallet',
+                    ),
+                    _WholesalerNavItem(
+                      icon: Icons.inventory_2_outlined,
+                      label: 'Products',
+                      route: '/products',
+                    ),
+                    _WholesalerNavItem(
+                      icon: Icons.settings_outlined,
+                      label: 'Settings',
+                      route: '/wholesaler/profile',
+                    ),
+                  ],
+                ),
               ),
-              _WholesalerNavItem(
-                icon: Icons.qr_code_2_outlined,
-                label: 'QR Progress',
-                route: '/wholesaler/qr-progress',
-              ),
-              _WholesalerNavItem(
-                icon: Icons.receipt_long_outlined,
-                label: 'Ledger',
-                route: '/wholesaler/wallet',
-              ),
-              _WholesalerNavItem(
-                icon: Icons.inventory_2_outlined,
-                label: 'Products',
-                route: '/products',
-              ),
-              _WholesalerNavItem(
-                icon: Icons.settings_outlined,
-                label: 'Settings',
-                route: '/wholesaler/profile',
-              ),
-            ],
-          ),
-        ),
-      ),
+            ),
     );
   }
 }

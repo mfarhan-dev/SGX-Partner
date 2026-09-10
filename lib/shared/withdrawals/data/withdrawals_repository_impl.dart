@@ -36,22 +36,9 @@ class SupabaseWithdrawalsRepository implements WithdrawalsRepository {
   }
 
   @override
-  Future<Withdrawal> createWithdrawal({
-    required int amountRupees,
-    required WithdrawalMethod method,
-    required String accountTitle,
-    required String accountNumber,
-  }) async {
+  Future<Withdrawal> createWithdrawal({required int amountRupees}) async {
     final row = await _client
-        .rpc(
-          'request_withdrawal',
-          params: {
-            'p_amount': amountRupees,
-            'p_method': method.dbValue,
-            'p_account_title': accountTitle,
-            'p_account_number': accountNumber,
-          },
-        )
+        .rpc('request_withdrawal', params: {'p_amount': amountRupees})
         .single();
     return Withdrawal.fromRow(row);
   }
@@ -82,5 +69,21 @@ class SupabaseWithdrawalsRepository implements WithdrawalsRepository {
   Future<int> getMinWithdrawalAmount() async {
     final row = await _client.rpc('get_withdrawal_settings').single();
     return (row['min_withdrawal_amount'] as num).toInt();
+  }
+
+  @override
+  Future<void> setPayoutMethod({
+    required WithdrawalMethod method,
+    required String accountTitle,
+    required String accountNumber,
+  }) async {
+    await _client.rpc(
+      'set_payout_method',
+      params: {
+        'p_method': method.dbValue,
+        'p_account_title': accountTitle,
+        'p_account_number': accountNumber,
+      },
+    );
   }
 }

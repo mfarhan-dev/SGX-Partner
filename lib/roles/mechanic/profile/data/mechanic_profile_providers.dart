@@ -2,6 +2,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 
 import '../../../../core/auth/auth_controller.dart';
+import '../../../../shared/withdrawals/domain/withdrawal_method.dart';
 import '../domain/mechanic_profile_data.dart';
 
 /// Fetches the signed-in mechanic's own profile once and caches it for
@@ -39,7 +40,8 @@ final mechanicProfileDataProvider = FutureProvider<MechanicProfileData>((
   final row = await client
       .from('mechanics')
       .select(
-        'full_name, phone, area, workshop_name, address, cnic, photo_storage_path, points_balance',
+        'full_name, phone, area, workshop_name, address, cnic, photo_storage_path, '
+        'points_balance, payout_method, payout_account_title, payout_account_number',
       )
       .eq('profile_id', uid)
       .single();
@@ -70,10 +72,15 @@ final mechanicProfileDataProvider = FutureProvider<MechanicProfileData>((
     phone: row['phone'] as String,
     area: row['area'] as String,
     pointsBalance: (row['points_balance'] as num).toInt(),
+    payoutMethod: (row['payout_method'] as String?) == null
+        ? null
+        : WithdrawalMethod.fromDb(row['payout_method'] as String),
     workshopName: row['workshop_name'] as String?,
     address: row['address'] as String?,
     cnic: row['cnic'] as String?,
     photoUrl: photoUrl,
     adminWhatsappNumber: whatsapp,
+    payoutAccountTitle: row['payout_account_title'] as String?,
+    payoutAccountNumber: row['payout_account_number'] as String?,
   );
 });

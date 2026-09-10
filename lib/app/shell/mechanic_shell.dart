@@ -1,57 +1,68 @@
 import 'package:flutter/material.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 
-class MechanicShell extends StatelessWidget {
+import 'bottom_chrome_visibility.dart';
+
+class MechanicShell extends ConsumerWidget {
   const MechanicShell({super.key, required this.child});
 
   final Widget child;
 
   @override
-  Widget build(BuildContext context) {
+  Widget build(BuildContext context, WidgetRef ref) {
+    // Hidden while a full-bleed bottom sheet (Withdraw Money) occupies
+    // this same screen region -- see bottomChromeHiddenProvider.
+    final chromeHidden = ref.watch(bottomChromeHiddenProvider);
+
     return Scaffold(
       body: child,
       floatingActionButtonLocation: FloatingActionButtonLocation.centerDocked,
-      floatingActionButton: SizedBox.square(
-        dimension: 64,
-        child: FloatingActionButton(
-          heroTag: null,
-          tooltip: 'Scan QR',
-          onPressed: () => context.go('/mechanic/scan'),
-          child: const Icon(Icons.qr_code_scanner),
-        ),
-      ),
-      bottomNavigationBar: BottomAppBar(
-        notchMargin: 8,
-        child: SafeArea(
-          top: false,
-          child: Row(
-            mainAxisAlignment: MainAxisAlignment.spaceAround,
-            children: [
-              _MechanicNavItem(
-                icon: Icons.home_outlined,
-                label: 'Home',
-                route: '/mechanic/home',
+      floatingActionButton: chromeHidden
+          ? null
+          : SizedBox.square(
+              dimension: 64,
+              child: FloatingActionButton(
+                heroTag: null,
+                tooltip: 'Scan QR',
+                onPressed: () => context.go('/mechanic/scan'),
+                child: const Icon(Icons.qr_code_scanner),
               ),
-              _MechanicNavItem(
-                icon: Icons.inventory_2_outlined,
-                label: 'Products',
-                route: '/products',
+            ),
+      bottomNavigationBar: chromeHidden
+          ? null
+          : BottomAppBar(
+              notchMargin: 8,
+              child: SafeArea(
+                top: false,
+                child: Row(
+                  mainAxisAlignment: MainAxisAlignment.spaceAround,
+                  children: [
+                    _MechanicNavItem(
+                      icon: Icons.home_outlined,
+                      label: 'Home',
+                      route: '/mechanic/home',
+                    ),
+                    _MechanicNavItem(
+                      icon: Icons.inventory_2_outlined,
+                      label: 'Products',
+                      route: '/products',
+                    ),
+                    const SizedBox(width: 64),
+                    _MechanicNavItem(
+                      icon: Icons.receipt_long_outlined,
+                      label: 'Activity',
+                      route: '/mechanic/wallet',
+                    ),
+                    _MechanicNavItem(
+                      icon: Icons.settings_outlined,
+                      label: 'Settings',
+                      route: '/mechanic/profile',
+                    ),
+                  ],
+                ),
               ),
-              const SizedBox(width: 64),
-              _MechanicNavItem(
-                icon: Icons.receipt_long_outlined,
-                label: 'Activity',
-                route: '/mechanic/wallet',
-              ),
-              _MechanicNavItem(
-                icon: Icons.settings_outlined,
-                label: 'Settings',
-                route: '/mechanic/profile',
-              ),
-            ],
-          ),
-        ),
-      ),
+            ),
     );
   }
 }

@@ -9,6 +9,7 @@ import '../../../../shared/widgets/partner_greeting.dart';
 import '../../../../shared/widgets/sgx_cards.dart';
 import '../../../../shared/withdrawals/data/withdrawals_providers.dart';
 import '../../profile/data/wholesaler_profile_providers.dart';
+import '../../withdrawals/presentation/wholesaler_withdraw_money_screen.dart';
 
 class WholesalerHomeScreen extends ConsumerWidget {
   const WholesalerHomeScreen({super.key});
@@ -81,7 +82,7 @@ class WholesalerHomeScreen extends ConsumerWidget {
               available: available,
               pending: pending,
               lifetime: available,
-              onWithdraw: () => context.push('/wholesaler/withdrawals/new'),
+              onWithdraw: () => showWholesalerWithdrawMoneySheet(context, ref),
               compact: true,
             ),
             if (activeWithdrawal != null) ...[

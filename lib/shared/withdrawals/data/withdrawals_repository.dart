@@ -6,12 +6,11 @@ abstract interface class WithdrawalsRepository {
 
   Future<Withdrawal> getWithdrawal(String withdrawalId);
 
-  Future<Withdrawal> createWithdrawal({
-    required int amountRupees,
-    required WithdrawalMethod method,
-    required String accountTitle,
-    required String accountNumber,
-  });
+  /// Uses whatever payout method is currently saved for this partner
+  /// (set via [setPayoutMethod]) -- request_withdrawal() snapshots it
+  /// onto the new row server-side, so nothing about *how* to pay is
+  /// collected here anymore.
+  Future<Withdrawal> createWithdrawal({required int amountRupees});
 
   Future<Withdrawal> confirmReceived(String withdrawalId);
 
@@ -21,4 +20,13 @@ abstract interface class WithdrawalsRepository {
   /// from app_settings.min_withdrawal_amount, via get_withdrawal_settings()
   /// since app_settings itself is staff-only readable.
   Future<int> getMinWithdrawalAmount();
+
+  /// Saves this partner's payout method for all future withdrawals.
+  /// Every method needs real account details -- the RPC itself
+  /// rejects an incomplete request.
+  Future<void> setPayoutMethod({
+    required WithdrawalMethod method,
+    required String accountTitle,
+    required String accountNumber,
+  });
 }

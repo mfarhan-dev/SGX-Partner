@@ -1,37 +1,35 @@
 enum WithdrawalMethod {
   easyPaisa,
   jazzCash,
-  bankTransfer,
-  cashCollection;
+  bankTransfer;
 
-  /// Parses the `withdrawals.method` text column exactly as its check
-  /// constraint allows.
+  /// Parses the `withdrawals.method` / `mechanics.payout_method` /
+  /// `wholesalers.payout_method` text columns exactly as their check
+  /// constraints allow. Cash collection from SGX was removed as an
+  /// option -- there was no way for staff to reconcile it in the
+  /// admin panel -- so every method here needs real account details.
   factory WithdrawalMethod.fromDb(String value) => switch (value) {
     'easy_paisa' => easyPaisa,
     'jazz_cash' => jazzCash,
     'bank_transfer' => bankTransfer,
-    'cash_collection' => cashCollection,
     _ => throw ArgumentError('Unknown withdrawal method: $value'),
   };
 
-  /// The exact text request_withdrawal() expects for p_method.
+  /// The exact text request_withdrawal()/set_payout_method() expect.
   String get dbValue => switch (this) {
     easyPaisa => 'easy_paisa',
     jazzCash => 'jazz_cash',
     bankTransfer => 'bank_transfer',
-    cashCollection => 'cash_collection',
   };
 
   String get label => switch (this) {
     easyPaisa => 'EasyPaisa',
     jazzCash => 'JazzCash',
     bankTransfer => 'Bank transfer',
-    cashCollection => 'Cash collection from SGX',
   };
 
   String get accountFieldLabel => switch (this) {
     bankTransfer => 'Account number / IBAN *',
-    cashCollection => 'Mobile Number *',
     _ => 'Mobile Number *',
   };
 }

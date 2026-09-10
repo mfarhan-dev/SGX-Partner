@@ -3,42 +3,65 @@ import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 
+import '../../../../app/shell/bottom_chrome_visibility.dart';
 import '../../../../app/theme/app_colors.dart';
 import '../../../../app/theme/app_spacing.dart';
 import '../../../../core/utils/money_formatter.dart';
 import '../../../../shared/models/money_amount.dart';
-import '../../../../shared/widgets/sgx_screen.dart';
 import '../../../../shared/withdrawals/data/withdrawals_providers.dart';
 import '../../../../shared/withdrawals/domain/withdrawal_method.dart';
 import '../../profile/data/wholesaler_profile_providers.dart';
 
-/// Real request_withdrawal() form -- replaces the fully decorative
-/// mock. Amount/method/account fields are validated client-side for a
-/// fast error message, but the RPC re-validates all of it server-side
-/// (minimum amount, sufficient balance) since that's the only source
-/// of truth that can't be raced or spoofed.
-class WholesalerWithdrawMoneyScreen extends ConsumerStatefulWidget {
-  const WholesalerWithdrawMoneyScreen({super.key});
-
-  @override
-  ConsumerState<WholesalerWithdrawMoneyScreen> createState() =>
-      _WholesalerWithdrawMoneyScreenState();
+/// Opens the real request_withdrawal() form as a bottom sheet -- "Quiet
+/// Ledger" design: a proper close button instead of relying on the
+/// drag handle alone, the amount field defaults to the full available
+/// balance (no separate "All" button). Payout method is never set up
+/// or changed here -- Settings > Payout Method is the one place that
+/// happens, matching the "don't collect account details twice" rule.
+/// This sheet only ever shows the single already-saved method, or an
+/// "Add payout account" row when nothing is saved yet.
+///
+/// The shell's own bottom nav bar (WholesalerShell) occupies this
+/// exact same screen region, so it's told to hide for the sheet's
+/// lifetime via bottomChromeHiddenProvider -- restored the instant the
+/// sheet closes, whether by the close button, a swipe, or a
+/// successful submit. Home's own content behind the sheet keeps the
+/// normal Material scrim; only the nav chrome disappears.
+Future<void> showWholesalerWithdrawMoneySheet(
+  BuildContext context,
+  WidgetRef ref,
+) async {
+  ref.read(bottomChromeHiddenProvider.notifier).set(true);
+  try {
+    await showModalBottomSheet<void>(
+      context: context,
+      isScrollControlled: true,
+      showDragHandle: true,
+      builder: (context) => const _WholesalerWithdrawMoneySheet(),
+    );
+  } finally {
+    ref.read(bottomChromeHiddenProvider.notifier).set(false);
+  }
 }
 
-class _WholesalerWithdrawMoneyScreenState
-    extends ConsumerState<WholesalerWithdrawMoneyScreen> {
+class _WholesalerWithdrawMoneySheet extends ConsumerStatefulWidget {
+  const _WholesalerWithdrawMoneySheet();
+
+  @override
+  ConsumerState<_WholesalerWithdrawMoneySheet> createState() =>
+      _WholesalerWithdrawMoneySheetState();
+}
+
+class _WholesalerWithdrawMoneySheetState
+    extends ConsumerState<_WholesalerWithdrawMoneySheet> {
   final _amountController = TextEditingController();
-  final _accountTitleController = TextEditingController();
-  final _accountNumberController = TextEditingController();
-  WithdrawalMethod _method = WithdrawalMethod.easyPaisa;
   bool _submitting = false;
   String? _error;
+  bool _prefilled = false;
 
   @override
   void dispose() {
     _amountController.dispose();
-    _accountTitleController.dispose();
-    _accountNumberController.dispose();
     super.dispose();
   }
 
@@ -46,104 +69,131 @@ class _WholesalerWithdrawMoneyScreenState
   Widget build(BuildContext context) {
     final profileAsync = ref.watch(wholesalerProfileDataProvider);
     final minAmountAsync = ref.watch(minWithdrawalAmountProvider);
-    final available = profileAsync.value?.pointsBalance ?? 0;
+    final profile = profileAsync.value;
+    final available = profile?.pointsBalance ?? 0;
     final minAmount = minAmountAsync.value;
+    final payoutMethod = profile?.payoutMethod;
 
-    return SgxScreen(
-      title: 'Withdraw Money',
-      showBack: true,
-      showNotifications: false,
-      children: [
-        _BalanceBanner(
-          amount: MoneyFormatter.format(MoneyAmount(cents: available * 100)),
-          minAmount: minAmount,
-        ),
-        const SizedBox(height: AppSpacing.md),
-        TextField(
-          controller: _amountController,
-          keyboardType: TextInputType.number,
-          inputFormatters: [FilteringTextInputFormatter.digitsOnly],
-          decoration: const InputDecoration(
-            labelText: 'How much?',
-            prefixText: 'Rs. ',
-            icon: Icon(Icons.payments_outlined),
-          ),
-        ),
-        const SizedBox(height: AppSpacing.sm),
-        Wrap(
-          spacing: AppSpacing.sm,
-          children: [
-            for (final amount in const [500, 1000, 5000])
-              if (amount <= available)
-                ActionChip(
-                  label: Text('Rs. $amount'),
-                  onPressed: () =>
-                      setState(() => _amountController.text = '$amount'),
+    // Full balance by default (editable) once the real profile arrives.
+    if (!_prefilled && profile != null) {
+      _prefilled = true;
+      _amountController.text = available > 0 ? '$available' : '';
+    }
+
+    return Padding(
+      padding: EdgeInsets.only(
+        left: AppSpacing.lg,
+        right: AppSpacing.lg,
+        bottom: MediaQuery.of(context).viewInsets.bottom + AppSpacing.lg,
+      ),
+      child: Column(
+        mainAxisSize: MainAxisSize.min,
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Row(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                      'Withdraw money',
+                      style: Theme.of(context).textTheme.headlineSmall
+                          ?.copyWith(fontWeight: FontWeight.w800),
+                    ),
+                    const SizedBox(height: 2),
+                    Text(
+                      minAmount == null
+                          ? '${MoneyFormatter.format(MoneyAmount(cents: available * 100))} available'
+                          : '${MoneyFormatter.format(MoneyAmount(cents: available * 100))} available · '
+                                'Rs. $minAmount minimum',
+                      style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                        color: AppColors.mutedTextOf(context),
+                      ),
+                    ),
+                  ],
                 ),
-            if (available > 0)
-              ActionChip(
-                label: Text('All (Rs. $available)'),
-                onPressed: () =>
-                    setState(() => _amountController.text = '$available'),
               ),
-          ],
-        ),
-        const SizedBox(height: AppSpacing.lg),
-        Text('Payment method', style: Theme.of(context).textTheme.titleMedium),
-        const SizedBox(height: AppSpacing.sm),
-        for (final method in WithdrawalMethod.values)
-          Padding(
-            padding: const EdgeInsets.only(bottom: AppSpacing.sm),
-            child: _MethodCard(
-              method: method,
-              selected: _method == method,
-              onTap: () => setState(() => _method = method),
+              IconButton(
+                tooltip: 'Close',
+                onPressed: () => Navigator.of(context).pop(),
+                icon: const Icon(Icons.close),
+                style: IconButton.styleFrom(
+                  backgroundColor: AppColors.surfaceContainerOf(context),
+                ),
+              ),
+            ],
+          ),
+          const SizedBox(height: AppSpacing.md),
+          TextField(
+            controller: _amountController,
+            keyboardType: TextInputType.number,
+            inputFormatters: [FilteringTextInputFormatter.digitsOnly],
+            style: const TextStyle(fontWeight: FontWeight.w700, fontSize: 20),
+            decoration: const InputDecoration(
+              prefixText: 'Rs. ',
+              labelText: 'How much?',
             ),
           ),
-        const SizedBox(height: AppSpacing.sm),
-        TextField(
-          controller: _accountTitleController,
-          decoration: const InputDecoration(labelText: 'Account Title *'),
-        ),
-        const SizedBox(height: AppSpacing.sm),
-        TextField(
-          controller: _accountNumberController,
-          keyboardType: _method == WithdrawalMethod.bankTransfer
-              ? TextInputType.text
-              : TextInputType.phone,
-          decoration: InputDecoration(
-            labelText: _method.accountFieldLabel,
-            hintText: _method == WithdrawalMethod.bankTransfer
-                ? null
-                : '03001234567',
+          const SizedBox(height: AppSpacing.md),
+          _PayoutSummary(
+            method: payoutMethod,
+            onManage: () => _openPayoutSettings(context),
           ),
-        ),
-        if (_error != null) ...[
-          const SizedBox(height: AppSpacing.sm),
-          Text(_error!, style: const TextStyle(color: AppColors.error)),
+          if (_error != null) ...[
+            const SizedBox(height: AppSpacing.sm),
+            Text(_error!, style: const TextStyle(color: AppColors.error)),
+          ],
+          const SizedBox(height: AppSpacing.md),
+          SizedBox(
+            width: double.infinity,
+            height: 52,
+            child: FilledButton.icon(
+              style: FilledButton.styleFrom(
+                shape: RoundedRectangleBorder(
+                  borderRadius: BorderRadius.circular(14),
+                ),
+                textStyle: const TextStyle(
+                  fontSize: 15.5,
+                  fontWeight: FontWeight.w700,
+                ),
+              ),
+              onPressed:
+                  _submitting ||
+                      minAmount == null ||
+                      profile == null ||
+                      payoutMethod == null
+                  ? null
+                  : () => _confirm(context, available, minAmount, payoutMethod),
+              icon: _submitting
+                  ? const SizedBox(
+                      width: 18,
+                      height: 18,
+                      child: CircularProgressIndicator(strokeWidth: 2),
+                    )
+                  : const Icon(Icons.arrow_forward),
+              label: const Text('Continue'),
+            ),
+          ),
         ],
-        const SizedBox(height: AppSpacing.md),
-        FilledButton.icon(
-          onPressed: _submitting || minAmount == null
-              ? null
-              : () => _confirm(context, available, minAmount),
-          icon: _submitting
-              ? const SizedBox(
-                  width: 18,
-                  height: 18,
-                  child: CircularProgressIndicator(strokeWidth: 2),
-                )
-              : const Icon(Icons.arrow_forward),
-          label: const Text('Continue'),
-        ),
-      ],
+      ),
     );
   }
 
-  void _confirm(BuildContext context, int available, int minAmount) {
+  void _openPayoutSettings(BuildContext context) {
+    final router = GoRouter.of(context);
+    Navigator.of(context).pop();
+    router.push('/wholesaler/payout-method');
+  }
+
+  void _confirm(
+    BuildContext context,
+    int available,
+    int minAmount,
+    WithdrawalMethod method,
+  ) {
     final amount = int.tryParse(_amountController.text);
-    final accountTitle = _accountTitleController.text.trim();
-    final accountNumber = _accountNumberController.text.trim();
 
     if (amount == null || amount <= 0) {
       setState(() => _error = 'Enter how much you want to withdraw.');
@@ -160,89 +210,36 @@ class _WholesalerWithdrawMoneyScreenState
       setState(() => _error = 'That is more than your available balance.');
       return;
     }
-    if (accountTitle.isEmpty || accountNumber.isEmpty) {
-      setState(() => _error = 'Account title and number are required.');
-      return;
-    }
     setState(() => _error = null);
 
-    showModalBottomSheet<void>(
+    showDialog<void>(
       context: context,
-      showDragHandle: true,
-      isScrollControlled: true,
-      builder: (sheetContext) => Padding(
-        padding: EdgeInsets.only(
-          left: AppSpacing.lg,
-          right: AppSpacing.lg,
-          bottom: MediaQuery.of(sheetContext).viewInsets.bottom + AppSpacing.lg,
+      builder: (dialogContext) => AlertDialog(
+        title: const Text('Confirm withdrawal'),
+        content: Text(
+          'Withdraw ${MoneyFormatter.format(MoneyAmount(cents: amount * 100))} '
+          'via ${method.label}?',
         ),
-        child: Column(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            Text(
-              'Confirm withdrawal',
-              style: Theme.of(sheetContext).textTheme.titleMedium,
-            ),
-            const SizedBox(height: AppSpacing.sm),
-            Text(
-              MoneyFormatter.format(MoneyAmount(cents: amount * 100)),
-              style: Theme.of(
-                sheetContext,
-              ).textTheme.displaySmall?.copyWith(color: AppColors.primary),
-            ),
-            const SizedBox(height: AppSpacing.md),
-            ListTile(
-              leading: const Icon(Icons.phone_android),
-              title: Text(_method.label),
-              subtitle: Text('$accountTitle · $accountNumber'),
-            ),
-            const SizedBox(height: AppSpacing.md),
-            Row(
-              children: [
-                Expanded(
-                  child: OutlinedButton(
-                    onPressed: () => Navigator.pop(sheetContext),
-                    child: const Text('Cancel'),
-                  ),
-                ),
-                const SizedBox(width: AppSpacing.sm),
-                Expanded(
-                  flex: 2,
-                  child: FilledButton.icon(
-                    onPressed: () => _submit(
-                      sheetContext,
-                      amount,
-                      accountTitle,
-                      accountNumber,
-                    ),
-                    icon: const Icon(Icons.check),
-                    label: const Text('Confirm Withdrawal'),
-                  ),
-                ),
-              ],
-            ),
-          ],
-        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(dialogContext),
+            child: const Text('Cancel'),
+          ),
+          FilledButton(
+            onPressed: () => _submit(dialogContext, amount),
+            child: const Text('Confirm'),
+          ),
+        ],
       ),
     );
   }
 
-  Future<void> _submit(
-    BuildContext sheetContext,
-    int amount,
-    String accountTitle,
-    String accountNumber,
-  ) async {
+  Future<void> _submit(BuildContext dialogContext, int amount) async {
     setState(() => _submitting = true);
     try {
       final withdrawal = await ref
           .read(withdrawalsRepositoryProvider)
-          .createWithdrawal(
-            amountRupees: amount,
-            method: _method,
-            accountTitle: accountTitle,
-            accountNumber: accountNumber,
-          );
+          .createWithdrawal(amountRupees: amount);
 
       // Balance was just deducted server-side -- refetch both so Home
       // and this list reflect it immediately instead of on next app
@@ -250,13 +247,15 @@ class _WholesalerWithdrawMoneyScreenState
       ref.invalidate(wholesalerProfileDataProvider);
       ref.invalidate(withdrawalsListProvider);
 
-      if (!sheetContext.mounted) return;
-      Navigator.pop(sheetContext);
+      if (!dialogContext.mounted) return;
+      Navigator.pop(dialogContext);
       if (!mounted) return;
-      context.go('/wholesaler/withdrawals/${withdrawal.id}');
+      Navigator.of(context).pop();
+      if (!context.mounted) return;
+      context.push('/wholesaler/withdrawals/${withdrawal.id}');
     } catch (error) {
-      if (!sheetContext.mounted) return;
-      Navigator.pop(sheetContext);
+      if (!dialogContext.mounted) return;
+      Navigator.pop(dialogContext);
       setState(() {
         _submitting = false;
         _error = 'Could not submit the request. Please try again.';
@@ -265,80 +264,103 @@ class _WholesalerWithdrawMoneyScreenState
   }
 }
 
-class _BalanceBanner extends StatelessWidget {
-  const _BalanceBanner({required this.amount, required this.minAmount});
+/// Either the one payout method already saved in Settings, or a call
+/// to go set one up -- this sheet never collects account details
+/// itself, so there's nothing to pick between here.
+class _PayoutSummary extends StatelessWidget {
+  const _PayoutSummary({required this.method, required this.onManage});
 
-  final String amount;
-  final int? minAmount;
+  final WithdrawalMethod? method;
+  final VoidCallback onManage;
 
   @override
   Widget build(BuildContext context) {
+    if (method == null) {
+      // Tonal card, not an OutlinedButton -- Material 3's own guidance
+      // reserves outlined buttons for a lower-emphasis, secondary
+      // action. Setting up a payout method is the one thing actually
+      // blocking this screen, so it gets the higher-emphasis filled
+      // treatment instead ("Variant 01" from the design exploration).
+      return InkWell(
+        onTap: onManage,
+        borderRadius: BorderRadius.circular(14),
+        child: Container(
+          padding: const EdgeInsets.symmetric(
+            horizontal: AppSpacing.sm,
+            vertical: AppSpacing.sm,
+          ),
+          decoration: BoxDecoration(
+            color: AppColors.errorContainer,
+            borderRadius: BorderRadius.circular(14),
+          ),
+          child: Row(
+            children: [
+              Container(
+                width: 34,
+                height: 34,
+                decoration: BoxDecoration(
+                  color: AppColors.primary,
+                  borderRadius: BorderRadius.circular(10),
+                ),
+                child: const Icon(Icons.add, color: Colors.white, size: 20),
+              ),
+              const SizedBox(width: AppSpacing.sm),
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                      'Add payout account',
+                      style: Theme.of(context).textTheme.bodyMedium?.copyWith(
+                        fontWeight: FontWeight.w700,
+                        color: AppColors.primaryDark,
+                      ),
+                    ),
+                    Text(
+                      'Required before you can withdraw',
+                      style: Theme.of(
+                        context,
+                      ).textTheme.labelSmall?.copyWith(color: AppColors.error),
+                    ),
+                  ],
+                ),
+              ),
+              Icon(Icons.chevron_right, color: AppColors.error),
+            ],
+          ),
+        ),
+      );
+    }
+
     return Container(
-      padding: const EdgeInsets.all(AppSpacing.md),
+      padding: const EdgeInsets.symmetric(
+        horizontal: AppSpacing.md,
+        vertical: AppSpacing.sm,
+      ),
       decoration: BoxDecoration(
-        color: AppColors.primary,
-        borderRadius: BorderRadius.circular(16),
+        color: AppColors.surfaceContainerOf(context),
+        borderRadius: BorderRadius.circular(14),
       ),
       child: Row(
         children: [
-          const Icon(Icons.account_balance_wallet, color: Colors.white),
+          Icon(
+            method == WithdrawalMethod.bankTransfer
+                ? Icons.account_balance_outlined
+                : Icons.phone_android,
+            color: AppColors.primary,
+          ),
           const SizedBox(width: AppSpacing.sm),
           Expanded(
             child: Text(
-              'Available Balance\n$amount',
-              style: const TextStyle(
-                color: Colors.white,
-                fontWeight: FontWeight.w800,
-              ),
+              'Paying to ${method!.label}',
+              style: Theme.of(
+                context,
+              ).textTheme.bodyMedium?.copyWith(fontWeight: FontWeight.w700),
             ),
           ),
-          if (minAmount != null)
-            Text(
-              'Minimum Rs. $minAmount',
-              style: const TextStyle(color: Colors.white70),
-            ),
+          TextButton(onPressed: onManage, child: const Text('Change')),
         ],
       ),
     );
   }
-}
-
-class _MethodCard extends StatelessWidget {
-  const _MethodCard({
-    required this.method,
-    required this.selected,
-    required this.onTap,
-  });
-
-  final WithdrawalMethod method;
-  final bool selected;
-  final VoidCallback onTap;
-
-  @override
-  Widget build(BuildContext context) {
-    return Card(
-      shape: RoundedRectangleBorder(
-        borderRadius: BorderRadius.circular(12),
-        side: BorderSide(
-          color: selected ? AppColors.primary : AppColors.outline,
-          width: selected ? 2 : 1,
-        ),
-      ),
-      child: ListTile(
-        onTap: onTap,
-        leading: Icon(_icon(method), color: AppColors.primary),
-        title: Text(method.label),
-        trailing: Icon(
-          selected ? Icons.radio_button_checked : Icons.radio_button_off,
-        ),
-      ),
-    );
-  }
-
-  IconData _icon(WithdrawalMethod method) => switch (method) {
-    WithdrawalMethod.easyPaisa ||
-    WithdrawalMethod.jazzCash => Icons.phone_android,
-    WithdrawalMethod.bankTransfer => Icons.account_balance_outlined,
-    WithdrawalMethod.cashCollection => Icons.store_outlined,
-  };
 }

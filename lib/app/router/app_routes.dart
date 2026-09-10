@@ -3,19 +3,19 @@ import 'package:go_router/go_router.dart';
 import '../../roles/mechanic/home/presentation/mechanic_home_screen.dart';
 import '../../roles/mechanic/onboarding/presentation/complete_mechanic_profile_screen.dart';
 import '../../roles/mechanic/profile/presentation/edit_mechanic_profile_screen.dart';
+import '../../roles/mechanic/profile/presentation/mechanic_payout_method_screen.dart';
 import '../../roles/mechanic/profile/presentation/mechanic_profile_screen.dart';
 import '../../roles/mechanic/scan_history/presentation/scan_history_screen.dart';
 import '../../roles/mechanic/scanner/presentation/qr_scanner_screen.dart';
 import '../../roles/mechanic/wallet/presentation/mechanic_wallet_screen.dart';
-import '../../roles/mechanic/withdrawals/presentation/mechanic_withdraw_money_screen.dart';
 import '../../roles/mechanic/withdrawals/presentation/mechanic_withdrawal_detail_screen.dart';
 import '../../roles/mechanic/withdrawals/presentation/mechanic_withdrawals_screen.dart';
 import '../../roles/wholesaler/home/presentation/wholesaler_home_screen.dart';
 import '../../roles/wholesaler/profile/presentation/edit_wholesaler_profile_screen.dart';
+import '../../roles/wholesaler/profile/presentation/wholesaler_payout_method_screen.dart';
 import '../../roles/wholesaler/profile/presentation/wholesaler_profile_screen.dart';
 import '../../roles/wholesaler/qr_progress/presentation/qr_progress_screen.dart';
 import '../../roles/wholesaler/wallet/presentation/wholesaler_ledger_screen.dart';
-import '../../roles/wholesaler/withdrawals/presentation/wholesaler_withdraw_money_screen.dart';
 import '../../roles/wholesaler/withdrawals/presentation/wholesaler_withdrawal_detail_screen.dart';
 import '../../roles/wholesaler/withdrawals/presentation/wholesaler_withdrawals_screen.dart';
 import '../../shared/auth/presentation/account_unavailable_screen.dart';
@@ -69,6 +69,16 @@ class AppRoutes {
         path: '/wholesaler/profile/edit',
         builder: (_, __) => const EditWholesalerProfileScreen(),
       ),
+      // Same reasoning again: reached from a Settings row, own back
+      // button, not a tab.
+      GoRoute(
+        path: '/mechanic/payout-method',
+        builder: (_, __) => const MechanicPayoutMethodScreen(),
+      ),
+      GoRoute(
+        path: '/wholesaler/payout-method',
+        builder: (_, __) => const WholesalerPayoutMethodScreen(),
+      ),
       // Same reasoning again: reached by tapping a campaign card (or
       // "See all"), not a tab -- the bottom nav and QR FAB were
       // leaking onto both the list and the detail screen.
@@ -86,6 +96,34 @@ class AppRoutes {
         path: '/products/:productId',
         builder: (_, state) => ProductDetailScreen(
           productId: state.pathParameters['productId'] ?? '',
+        ),
+      ),
+      // Same reasoning again: the Withdrawals list and detail screens
+      // are reached by tapping into a withdrawal, not a tab -- these
+      // were incorrectly nested inside the ShellRoute below, which is
+      // exactly why the bottom nav and QR FAB were leaking onto them.
+      // "New request" itself is no longer a route at all -- it opens
+      // as a bottom sheet straight from Home (showMechanicWithdrawMoneySheet /
+      // showWholesalerWithdrawMoneySheet), since the old full screen
+      // left most of its height empty.
+      GoRoute(
+        path: '/mechanic/withdrawals',
+        builder: (_, __) => const MechanicWithdrawalsScreen(),
+      ),
+      GoRoute(
+        path: '/mechanic/withdrawals/:withdrawalId',
+        builder: (_, state) => MechanicWithdrawalDetailScreen(
+          withdrawalId: state.pathParameters['withdrawalId'] ?? '',
+        ),
+      ),
+      GoRoute(
+        path: '/wholesaler/withdrawals',
+        builder: (_, __) => const WholesalerWithdrawalsScreen(),
+      ),
+      GoRoute(
+        path: '/wholesaler/withdrawals/:withdrawalId',
+        builder: (_, state) => WholesalerWithdrawalDetailScreen(
+          withdrawalId: state.pathParameters['withdrawalId'] ?? '',
         ),
       ),
       ShellRoute(
@@ -123,20 +161,6 @@ class AppRoutes {
             builder: (_, __) => const MechanicWalletScreen(),
           ),
           GoRoute(
-            path: '/mechanic/withdrawals',
-            builder: (_, __) => const MechanicWithdrawalsScreen(),
-          ),
-          GoRoute(
-            path: '/mechanic/withdrawals/new',
-            builder: (_, __) => const MechanicWithdrawMoneyScreen(),
-          ),
-          GoRoute(
-            path: '/mechanic/withdrawals/:withdrawalId',
-            builder: (_, state) => MechanicWithdrawalDetailScreen(
-              withdrawalId: state.pathParameters['withdrawalId'] ?? '',
-            ),
-          ),
-          GoRoute(
             path: '/mechanic/profile',
             builder: (_, __) => const MechanicProfileScreen(),
           ),
@@ -151,20 +175,6 @@ class AppRoutes {
           GoRoute(
             path: '/wholesaler/wallet',
             builder: (_, __) => const WholesalerLedgerScreen(),
-          ),
-          GoRoute(
-            path: '/wholesaler/withdrawals',
-            builder: (_, __) => const WholesalerWithdrawalsScreen(),
-          ),
-          GoRoute(
-            path: '/wholesaler/withdrawals/new',
-            builder: (_, __) => const WholesalerWithdrawMoneyScreen(),
-          ),
-          GoRoute(
-            path: '/wholesaler/withdrawals/:withdrawalId',
-            builder: (_, state) => WholesalerWithdrawalDetailScreen(
-              withdrawalId: state.pathParameters['withdrawalId'] ?? '',
-            ),
           ),
           GoRoute(
             path: '/wholesaler/profile',

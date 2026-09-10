@@ -9,6 +9,7 @@ import '../../../../shared/widgets/partner_greeting.dart';
 import '../../../../shared/widgets/sgx_cards.dart';
 import '../../../../shared/withdrawals/data/withdrawals_providers.dart';
 import '../../profile/data/mechanic_profile_providers.dart';
+import '../../withdrawals/presentation/mechanic_withdraw_money_screen.dart';
 
 class MechanicHomeScreen extends ConsumerWidget {
   const MechanicHomeScreen({super.key});
@@ -81,7 +82,7 @@ class MechanicHomeScreen extends ConsumerWidget {
               pending: pending,
               lifetime: available,
               compact: true,
-              onWithdraw: () => context.push('/mechanic/withdrawals/new'),
+              onWithdraw: () => showMechanicWithdrawMoneySheet(context, ref),
             ),
             if (activeWithdrawal != null) ...[
               const SizedBox(height: AppSpacing.md),
