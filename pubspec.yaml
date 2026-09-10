@@ -29,4 +29,5 @@ flutter:
     - assets/branding/
     - assets/images/products/
     - assets/images/campaigns/
+    - assets/images/payout_providers/
     - assets/mock/

@@ -11,8 +11,20 @@ import '../../../../shared/widgets/partner_avatar.dart';
 import '../../../../shared/widgets/settings_screen_skeleton.dart';
 import '../../../../shared/widgets/sgx_screen.dart';
 import '../../../../shared/widgets/single_choice_dialog.dart';
+import '../../../../shared/withdrawals/data/withdrawals_providers.dart';
+import '../../../../shared/withdrawals/domain/payout_account.dart';
 import '../data/mechanic_profile_providers.dart';
 import '../domain/mechanic_profile_data.dart';
+
+/// "Not set up" with none saved, the first-added account's provider
+/// name with one or more saved, plus a count once there's more than
+/// one -- mirrors the wholesaler screen's identical helper.
+String _payoutSubtitle(List<PayoutAccount>? accounts) {
+  if (accounts == null || accounts.isEmpty) return 'Not set up';
+  final firstAccount = accounts.first;
+  if (accounts.length == 1) return firstAccount.provider.label;
+  return '${firstAccount.provider.label} +${accounts.length - 1} more';
+}
 
 class MechanicProfileScreen extends ConsumerStatefulWidget {
   const MechanicProfileScreen({super.key});
@@ -102,6 +114,7 @@ class _MechanicProfileScreenState extends ConsumerState<MechanicProfileScreen> {
   @override
   Widget build(BuildContext context) {
     final profileAsync = ref.watch(mechanicProfileDataProvider);
+    final accountsAsync = ref.watch(payoutAccountsProvider);
 
     return SgxScreen(
       title: 'Settings',
@@ -112,14 +125,17 @@ class _MechanicProfileScreenState extends ConsumerState<MechanicProfileScreen> {
       // keeps rendering `data` with the old value instead of flashing
       // the skeleton over already-good content.
       children: profileAsync.when(
-        data: (profile) => _content(profile),
+        data: (profile) => _content(profile, accountsAsync.value),
         loading: () => const [SettingsScreenSkeleton()],
-        error: (error, stackTrace) => _content(null),
+        error: (error, stackTrace) => _content(null, accountsAsync.value),
       ),
     );
   }
 
-  List<Widget> _content(MechanicProfileData? profile) {
+  List<Widget> _content(
+    MechanicProfileData? profile,
+    List<PayoutAccount>? accounts,
+  ) {
     return [
       if (profile != null)
         _ProfileHeader(profile: profile)
@@ -176,7 +192,7 @@ class _MechanicProfileScreenState extends ConsumerState<MechanicProfileScreen> {
           ListTile(
             leading: const Icon(Icons.payments_outlined),
             title: const Text('Payout Method'),
-            subtitle: Text(profile?.payoutMethod?.label ?? 'Not set up'),
+            subtitle: Text(_payoutSubtitle(accounts)),
             trailing: const Icon(Icons.chevron_right),
             onTap: () => context.push('/mechanic/payout-method'),
           ),

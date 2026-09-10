@@ -1,5 +1,5 @@
 import '../../../shared/models/money_amount.dart';
-import 'withdrawal_method.dart';
+import 'payout_provider.dart';
 import 'withdrawal_status.dart';
 
 class Withdrawal {
@@ -25,7 +25,7 @@ class Withdrawal {
       id: row['id'] as String,
       withdrawalNo: row['withdrawal_no'] as String,
       amount: MoneyAmount(cents: (row['amount'] as num).toInt() * 100),
-      method: WithdrawalMethod.fromDb(row['method'] as String),
+      method: PayoutProvider.byId(row['method'] as String),
       status: WithdrawalStatus.fromDb(row['status'] as String),
       accountTitle: row['account_title'] as String,
       accountNumber: row['account_number'] as String,
@@ -43,7 +43,7 @@ class Withdrawal {
   final String id;
   final String withdrawalNo;
   final MoneyAmount amount;
-  final WithdrawalMethod method;
+  final PayoutProvider method;
   final WithdrawalStatus status;
   final String accountTitle;
   final String accountNumber;

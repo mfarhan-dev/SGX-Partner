@@ -1,6 +1,7 @@
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../../core/auth/auth_controller.dart';
+import '../domain/payout_account.dart';
 import '../domain/withdrawal.dart';
 import 'withdrawals_repository.dart';
 import 'withdrawals_repository_impl.dart';
@@ -46,4 +47,17 @@ final withdrawalDetailProvider = FutureProvider.autoDispose
 final minWithdrawalAmountProvider = FutureProvider<int>((ref) async {
   final repository = ref.watch(withdrawalsRepositoryProvider);
   return repository.getMinWithdrawalAmount();
+});
+
+/// Every payout account the signed-in partner has saved, oldest-added
+/// first -- one shared provider for both roles, same reasoning as
+/// [withdrawalsListProvider] (session-cached, not `.autoDispose`;
+/// invalidate after any add/edit/delete so Settings and the Withdraw
+/// Money sheet both see the change immediately). There's no "default"
+/// concept -- insertion order IS the order shown everywhere, straight
+/// from the repository (which already orders by created_at).
+final payoutAccountsProvider = FutureProvider<List<PayoutAccount>>((ref) async {
+  ref.watch(authControllerProvider);
+  final repository = ref.watch(withdrawalsRepositoryProvider);
+  return repository.listPayoutAccounts();
 });

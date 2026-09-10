@@ -3,56 +3,34 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../../../app/theme/app_colors.dart';
 import '../../../../app/theme/app_spacing.dart';
+import '../../../../shared/widgets/confirm_dialog.dart';
 import '../../../../shared/widgets/sgx_screen.dart';
 import '../../../../shared/withdrawals/data/withdrawals_providers.dart';
-import '../../../../shared/withdrawals/domain/withdrawal_method.dart';
-import '../data/mechanic_profile_providers.dart';
+import '../../../../shared/withdrawals/domain/payout_account.dart';
+import '../../../../shared/withdrawals/domain/payout_provider.dart';
+import '../../../../shared/withdrawals/presentation/account_details_sheet.dart';
+import '../../../../shared/withdrawals/presentation/payout_provider_logo.dart';
 
-/// Set once here in Settings, not re-entered on every withdrawal --
-/// request_withdrawal() snapshots whatever is saved here onto each
-/// new withdrawal automatically. Same pattern as DoorDash Dasher's
-/// "Payout Methods" screen: one active method, switchable. No cash
-/// option -- every method needs real account details so staff can
-/// actually reconcile it in the admin panel.
-class MechanicPayoutMethodScreen extends ConsumerStatefulWidget {
+/// A partner can save several payout accounts (a wallet AND a bank
+/// account, ...) -- see payout_accounts table. Each saved account can
+/// be edited or deleted on its own. There's no "default" flag to set
+/// -- accounts are always shown, and used, in the order they were
+/// added (oldest first), matching the same order the Withdraw Money
+/// sheet's "Pay to" grid shows them in. One account per provider:
+/// "Add a payout account" below only ever lists providers that aren't
+/// already saved -- once EasyPaisa/JazzCash/etc. has an account, it
+/// drops out of that list until deleted again.
+class MechanicPayoutMethodScreen extends ConsumerWidget {
   const MechanicPayoutMethodScreen({super.key});
 
   @override
-  ConsumerState<MechanicPayoutMethodScreen> createState() =>
-      _MechanicPayoutMethodScreenState();
-}
-
-class _MechanicPayoutMethodScreenState
-    extends ConsumerState<MechanicPayoutMethodScreen> {
-  WithdrawalMethod? _selected;
-  final _accountTitleController = TextEditingController();
-  final _accountNumberController = TextEditingController();
-  bool _saving = false;
-  String? _error;
-  bool _prefilled = false;
-
-  @override
-  void dispose() {
-    _accountTitleController.dispose();
-    _accountNumberController.dispose();
-    super.dispose();
-  }
-
-  @override
-  Widget build(BuildContext context) {
-    final profileAsync = ref.watch(mechanicProfileDataProvider);
-    final profile = profileAsync.value;
-
-    // Prefill once the real saved method arrives -- not in initState,
-    // since the profile is still loading at that point.
-    if (!_prefilled && profile != null) {
-      _prefilled = true;
-      _selected = profile.payoutMethod;
-      _accountTitleController.text = profile.payoutAccountTitle ?? '';
-      _accountNumberController.text = profile.payoutAccountNumber ?? '';
-    }
-
-    final selected = _selected ?? WithdrawalMethod.easyPaisa;
+  Widget build(BuildContext context, WidgetRef ref) {
+    final accountsAsync = ref.watch(payoutAccountsProvider);
+    final accounts = accountsAsync.value ?? const <PayoutAccount>[];
+    final savedProviderIds = accounts.map((a) => a.provider.id).toSet();
+    final addableProviders = PayoutProvider.catalog
+        .where((p) => !savedProviderIds.contains(p.id))
+        .toList();
 
     return SgxScreen(
       title: 'Payout Method',
@@ -60,130 +38,209 @@ class _MechanicPayoutMethodScreenState
       showNotifications: false,
       children: [
         Text(
-          'This is how SGX pays you when you withdraw -- set it once here '
-          'and every withdrawal request will use it automatically.',
+          'This is how SGX pays you when you withdraw -- save one or more '
+          'accounts here and pick which one to use each time you withdraw.',
           style: TextStyle(color: AppColors.mutedTextOf(context)),
         ),
         const SizedBox(height: AppSpacing.md),
-        for (final method in WithdrawalMethod.values)
-          Padding(
-            padding: const EdgeInsets.only(bottom: AppSpacing.sm),
-            child: _MethodCard(
-              method: method,
-              selected: selected == method,
-              onTap: () => setState(() => _selected = method),
-            ),
+        accountsAsync.when(
+          data: (accounts) => accounts.isEmpty
+              ? const SizedBox.shrink()
+              : Column(
+                  children: [
+                    for (final account in accounts)
+                      _SavedAccountRow(
+                        account: account,
+                        onEdit: () => _openAccountDetailsSheet(
+                          context,
+                          ref,
+                          account.provider,
+                          existing: account,
+                        ),
+                        onDelete: () => _confirmDelete(context, ref, account),
+                      ),
+                    const SizedBox(height: AppSpacing.md),
+                  ],
+                ),
+          loading: () => const Padding(
+            padding: EdgeInsets.symmetric(vertical: AppSpacing.md),
+            child: Center(child: CircularProgressIndicator()),
           ),
-        const SizedBox(height: AppSpacing.sm),
-        TextField(
-          controller: _accountTitleController,
-          decoration: const InputDecoration(labelText: 'Account Title *'),
-        ),
-        const SizedBox(height: AppSpacing.sm),
-        TextField(
-          controller: _accountNumberController,
-          keyboardType: selected == WithdrawalMethod.bankTransfer
-              ? TextInputType.text
-              : TextInputType.phone,
-          decoration: InputDecoration(
-            labelText: selected.accountFieldLabel,
-            hintText: selected == WithdrawalMethod.bankTransfer
-                ? null
-                : '03001234567',
+          error: (error, stackTrace) => Text(
+            'Could not load your saved accounts.',
+            style: TextStyle(color: AppColors.error),
           ),
         ),
-        if (_error != null) ...[
+        if (addableProviders.isNotEmpty) ...[
+          Text(
+            'Add a payout account',
+            style: Theme.of(
+              context,
+            ).textTheme.labelLarge?.copyWith(fontWeight: FontWeight.w700),
+          ),
           const SizedBox(height: AppSpacing.sm),
-          Text(_error!, style: const TextStyle(color: AppColors.error)),
+          for (final provider in addableProviders)
+            _ProviderRow(
+              provider: provider,
+              onTap: () => _openAccountDetailsSheet(context, ref, provider),
+            ),
         ],
-        const SizedBox(height: AppSpacing.md),
-        FilledButton.icon(
-          onPressed: _saving ? null : () => _save(selected),
-          icon: _saving
-              ? const SizedBox(
-                  width: 18,
-                  height: 18,
-                  child: CircularProgressIndicator(strokeWidth: 2),
-                )
-              : const Icon(Icons.check),
-          label: const Text('Save Payout Method'),
-        ),
       ],
     );
   }
 
-  Future<void> _save(WithdrawalMethod method) async {
-    final accountTitle = _accountTitleController.text.trim();
-    final accountNumber = _accountNumberController.text.trim();
-
-    if (accountTitle.isEmpty || accountNumber.isEmpty) {
-      setState(() => _error = 'Account title and number are required.');
-      return;
-    }
-    setState(() {
-      _saving = true;
-      _error = null;
-    });
-
-    try {
-      await ref
-          .read(withdrawalsRepositoryProvider)
-          .setPayoutMethod(
-            method: method,
-            accountTitle: accountTitle,
-            accountNumber: accountNumber,
-          );
-      ref.invalidate(mechanicProfileDataProvider);
-      if (!mounted) return;
-      ScaffoldMessenger.of(
-        context,
-      ).showSnackBar(const SnackBar(content: Text('Payout method saved.')));
-      Navigator.of(context).pop();
-    } catch (error) {
-      if (!mounted) return;
-      setState(() {
-        _saving = false;
-        _error = 'Could not save. Please try again.';
-      });
-    }
-  }
-}
-
-class _MethodCard extends StatelessWidget {
-  const _MethodCard({
-    required this.method,
-    required this.selected,
-    required this.onTap,
-  });
-
-  final WithdrawalMethod method;
-  final bool selected;
-  final VoidCallback onTap;
-
-  @override
-  Widget build(BuildContext context) {
-    return Card(
-      shape: RoundedRectangleBorder(
-        borderRadius: BorderRadius.circular(12),
-        side: BorderSide(
-          color: selected ? AppColors.primary : AppColors.outlineOf(context),
-          width: selected ? 2 : 1,
-        ),
-      ),
-      child: ListTile(
-        onTap: onTap,
-        leading: Icon(_icon(method), color: AppColors.primary),
-        title: Text(method.label),
-        trailing: Icon(
-          selected ? Icons.radio_button_checked : Icons.radio_button_off,
-        ),
+  Future<void> _openAccountDetailsSheet(
+    BuildContext context,
+    WidgetRef ref,
+    PayoutProvider provider, {
+    PayoutAccount? existing,
+  }) {
+    return showModalBottomSheet<void>(
+      context: context,
+      isScrollControlled: true,
+      showDragHandle: true,
+      builder: (sheetContext) => AccountDetailsSheet(
+        provider: provider,
+        existing: existing,
+        onSaved: (_) {},
       ),
     );
   }
 
-  IconData _icon(WithdrawalMethod method) => switch (method) {
-    WithdrawalMethod.easyPaisa ||
-    WithdrawalMethod.jazzCash => Icons.phone_android,
-    WithdrawalMethod.bankTransfer => Icons.account_balance_outlined,
-  };
+  Future<void> _confirmDelete(
+    BuildContext context,
+    WidgetRef ref,
+    PayoutAccount account,
+  ) async {
+    final confirmed = await showConfirmDialog(
+      context: context,
+      title: 'Delete payout account?',
+      message:
+          'Remove ${account.provider.label} (${account.accountNumber})? '
+          'This cannot be undone.',
+      confirmLabel: 'Delete',
+      isDestructive: true,
+    );
+    if (!confirmed) return;
+
+    try {
+      await ref
+          .read(withdrawalsRepositoryProvider)
+          .deletePayoutAccount(account.id);
+      ref.invalidate(payoutAccountsProvider);
+    } catch (error) {
+      if (!context.mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('Could not delete. Please try again.')),
+      );
+    }
+  }
+}
+
+/// One already-saved account: provider logo, title/number, plus edit
+/// and delete.
+class _SavedAccountRow extends StatelessWidget {
+  const _SavedAccountRow({
+    required this.account,
+    required this.onEdit,
+    required this.onDelete,
+  });
+
+  final PayoutAccount account;
+  final VoidCallback onEdit;
+  final VoidCallback onDelete;
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      margin: const EdgeInsets.only(bottom: AppSpacing.sm),
+      padding: const EdgeInsets.symmetric(
+        horizontal: AppSpacing.sm,
+        vertical: AppSpacing.sm,
+      ),
+      decoration: BoxDecoration(
+        color: AppColors.surfaceContainerOf(context),
+        borderRadius: BorderRadius.circular(14),
+      ),
+      child: Row(
+        children: [
+          PayoutProviderLogo(provider: account.provider, size: 30),
+          const SizedBox(width: AppSpacing.sm),
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(
+                  account.provider.label,
+                  style: Theme.of(
+                    context,
+                  ).textTheme.bodyMedium?.copyWith(fontWeight: FontWeight.w700),
+                ),
+                Text(
+                  '${account.accountTitle} · ${account.accountNumber}',
+                  style: Theme.of(context).textTheme.labelSmall?.copyWith(
+                    color: AppColors.mutedTextOf(context),
+                  ),
+                  overflow: TextOverflow.ellipsis,
+                ),
+              ],
+            ),
+          ),
+          IconButton(
+            tooltip: 'Edit',
+            onPressed: onEdit,
+            icon: const Icon(Icons.edit_outlined, size: 20),
+          ),
+          IconButton(
+            tooltip: 'Delete',
+            onPressed: onDelete,
+            icon: Icon(Icons.delete_outline, size: 20, color: AppColors.error),
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+/// Row for the "add a payout account" catalog -- only providers not
+/// already saved (see [MechanicPayoutMethodScreen.build]'s
+/// addableProviders filter).
+class _ProviderRow extends StatelessWidget {
+  const _ProviderRow({required this.provider, required this.onTap});
+
+  final PayoutProvider provider;
+  final VoidCallback onTap;
+
+  @override
+  Widget build(BuildContext context) {
+    return InkWell(
+      onTap: onTap,
+      child: Container(
+        padding: const EdgeInsets.symmetric(vertical: AppSpacing.sm),
+        decoration: BoxDecoration(
+          border: Border(
+            bottom: BorderSide(color: AppColors.outlineOf(context)),
+          ),
+        ),
+        child: Row(
+          children: [
+            PayoutProviderLogo(provider: provider, size: 28),
+            const SizedBox(width: AppSpacing.sm),
+            Expanded(
+              child: Text(
+                provider.label,
+                style: Theme.of(
+                  context,
+                ).textTheme.bodyMedium?.copyWith(fontWeight: FontWeight.w700),
+              ),
+            ),
+            Icon(
+              Icons.add_circle_outline,
+              color: AppColors.mutedTextOf(context),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
 }
