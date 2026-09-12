@@ -3,6 +3,7 @@ import 'package:supabase_flutter/supabase_flutter.dart';
 import '../domain/payout_account.dart';
 import '../domain/payout_provider.dart';
 import '../domain/withdrawal.dart';
+import '../domain/withdrawal_payment_event.dart';
 import 'withdrawals_repository.dart';
 
 /// Talks to the `withdrawals` / `payout_accounts` tables and their
@@ -90,6 +91,20 @@ class SupabaseWithdrawalsRepository implements WithdrawalsRepository {
     } catch (_) {
       return null;
     }
+  }
+
+  @override
+  Future<List<WithdrawalPaymentEvent>> getPaymentEvents(
+    String withdrawalId,
+  ) async {
+    final rows = await _client.rpc(
+      'get_withdrawal_payment_events',
+      params: {'p_withdrawal_id': withdrawalId},
+    );
+    return (rows as List)
+        .cast<Map<String, dynamic>>()
+        .map(WithdrawalPaymentEvent.fromRow)
+        .toList();
   }
 
   @override

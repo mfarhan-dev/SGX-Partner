@@ -75,11 +75,21 @@ class WithdrawalActivityEvent {
 /// [proofImageUrl] is a signed URL for SGX's payment-proof screenshot,
 /// resolved separately (see withdrawalProofUrlProvider -- kept out of
 /// this function since building the event list itself is synchronous).
-/// Attached only to the "Payment sent by SGX" event, since that's the
-/// one moment it's evidence for.
+/// Used as a fallback for the "Payment sent by SGX" event only when
+/// [paymentEvents] is empty.
+///
+/// [paymentEvents] is this withdrawal's full "marked paid" history from
+/// `audit_logs` (see withdrawalPaymentEventsProvider), oldest first,
+/// with each entry's own proof already resolved to a signed URL. The
+/// `withdrawals` row's own paymentSentAt/proofStoragePath only ever
+/// holds the *latest* payment -- a re-pay after a dispute overwrites
+/// both -- so once there's more than one payment event, this is the
+/// only way to show the first payment's own screenshot on its own
+/// step instead of it being silently replaced by the re-pay's.
 List<WithdrawalActivityEvent> buildWithdrawalActivityEvents(
   Withdrawal withdrawal, {
   String? proofImageUrl,
+  List<({DateTime paidAt, String? proofUrl})> paymentEvents = const [],
 }) {
   final status = withdrawal.status;
   final wentThroughDispute = withdrawal.disputeReason != null;
@@ -93,7 +103,18 @@ List<WithdrawalActivityEvent> buildWithdrawalActivityEvents(
     ),
   ];
 
-  if (withdrawal.paymentSentAt != null) {
+  if (paymentEvents.isNotEmpty) {
+    events.add(
+      WithdrawalActivityEvent(
+        title: 'Payment sent by SGX',
+        shortLabel: 'Payment sent',
+        kind: WithdrawalActivityKind.done,
+        timestamp: paymentEvents.first.paidAt,
+        actorLabel: 'SGX',
+        imageUrl: paymentEvents.first.proofUrl,
+      ),
+    );
+  } else if (withdrawal.paymentSentAt != null) {
     events.add(
       WithdrawalActivityEvent(
         title: 'Payment sent by SGX',
@@ -129,6 +150,22 @@ List<WithdrawalActivityEvent> buildWithdrawalActivityEvents(
         actorLabel: 'You',
       ),
     );
+
+    // Every payment after the first is SGX re-sending following that
+    // dispute -- each gets its own step with its own screenshot,
+    // chronologically after the dispute that prompted it.
+    for (final repay in paymentEvents.skip(1)) {
+      events.add(
+        WithdrawalActivityEvent(
+          title: 'Payment sent again by SGX',
+          shortLabel: 'Repaid',
+          kind: WithdrawalActivityKind.done,
+          timestamp: repay.paidAt,
+          actorLabel: 'SGX',
+          imageUrl: repay.proofUrl,
+        ),
+      );
+    }
   }
 
   switch (status) {

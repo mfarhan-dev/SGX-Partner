@@ -3,6 +3,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../../core/auth/auth_controller.dart';
 import '../domain/payout_account.dart';
 import '../domain/withdrawal.dart';
+import '../domain/withdrawal_payment_event.dart';
 import 'withdrawals_repository.dart';
 import 'withdrawals_repository_impl.dart';
 
@@ -57,6 +58,17 @@ final withdrawalProofUrlProvider = FutureProvider.autoDispose
     .family<String?, String>((ref, storagePath) async {
       final repository = ref.watch(withdrawalsRepositoryProvider);
       return repository.getProofImageUrl(storagePath);
+    });
+
+/// This withdrawal's full "marked paid" history, oldest first --
+/// normally one entry, more than one only after a dispute got
+/// re-paid. `.autoDispose` + `.family`, same reasoning as
+/// [withdrawalProofUrlProvider]: only ever watched from the Detail
+/// screen for whichever withdrawal is open.
+final withdrawalPaymentEventsProvider = FutureProvider.autoDispose
+    .family<List<WithdrawalPaymentEvent>, String>((ref, withdrawalId) async {
+      final repository = ref.watch(withdrawalsRepositoryProvider);
+      return repository.getPaymentEvents(withdrawalId);
     });
 
 /// Every payout account the signed-in partner has saved, oldest-added

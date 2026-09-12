@@ -11,6 +11,7 @@ import '../../../../shared/widgets/whatsapp_fab.dart';
 import '../../../../shared/withdrawals/data/withdrawals_providers.dart';
 import '../../../../shared/withdrawals/domain/withdrawal.dart';
 import '../../../../shared/withdrawals/domain/withdrawal_activity_event.dart';
+import '../../../../shared/withdrawals/domain/withdrawal_payment_event.dart';
 import '../../../../shared/withdrawals/domain/withdrawal_status.dart';
 import '../../../../shared/withdrawals/presentation/widgets/withdrawal_status_chip.dart';
 import '../../../../shared/withdrawals/presentation/widgets/withdrawal_timeline_list.dart';
@@ -112,14 +113,36 @@ class _WithdrawalDetailBodyState extends ConsumerState<_WithdrawalDetailBody> {
         withdrawal.status == WithdrawalStatus.paymentSent;
     // Only fetched when a proof actually exists on this withdrawal --
     // older withdrawals or ones sent without a screenshot never hit
-    // storage at all.
+    // storage at all. Kept as a fallback for buildWithdrawalActivityEvents
+    // below, in case the payment history read comes back empty.
     final proofPath = withdrawal.proofStoragePath;
     final proofUrlAsync = proofPath == null
         ? null
         : ref.watch(withdrawalProofUrlProvider(proofPath));
+
+    // This withdrawal's full "marked paid" history -- normally one
+    // entry, more than one only after a dispute got re-paid. Each
+    // entry's own screenshot is resolved to a signed URL right here so
+    // buildWithdrawalActivityEvents can stay synchronous.
+    final paymentEventRows =
+        ref.watch(withdrawalPaymentEventsProvider(withdrawal.id)).value ??
+        const <WithdrawalPaymentEvent>[];
+    final paymentEvents = [
+      for (final row in paymentEventRows)
+        (
+          paidAt: row.paidAt,
+          proofUrl: row.proofStoragePath == null
+              ? null
+              : ref
+                    .watch(withdrawalProofUrlProvider(row.proofStoragePath!))
+                    .value,
+        ),
+    ];
+
     final events = buildWithdrawalActivityEvents(
       withdrawal,
       proofImageUrl: proofUrlAsync?.value,
+      paymentEvents: paymentEvents,
     );
 
     return Column(

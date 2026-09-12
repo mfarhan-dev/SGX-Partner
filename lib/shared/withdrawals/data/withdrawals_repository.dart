@@ -1,6 +1,7 @@
 import '../domain/payout_account.dart';
 import '../domain/payout_provider.dart';
 import '../domain/withdrawal.dart';
+import '../domain/withdrawal_payment_event.dart';
 
 abstract interface class WithdrawalsRepository {
   Future<List<Withdrawal>> listWithdrawals();
@@ -27,6 +28,15 @@ abstract interface class WithdrawalsRepository {
   /// the file was since deleted); never throws, since a missing
   /// screenshot shouldn't take down the whole detail screen.
   Future<String?> getProofImageUrl(String storagePath);
+
+  /// Every time SGX marked [withdrawalId] paid, oldest first -- one row
+  /// normally, more than one only when a dispute got re-paid. The
+  /// `withdrawals` row itself only keeps the latest payment's
+  /// timestamp/proof (a re-pay overwrites both), so this is the only
+  /// place to see an earlier payment's own screenshot once a re-pay has
+  /// happened. Backed by get_withdrawal_payment_events(), a
+  /// partner-scoped read into `audit_logs` (otherwise staff-only).
+  Future<List<WithdrawalPaymentEvent>> getPaymentEvents(String withdrawalId);
 
   /// Rs. minimum a partner is allowed to request in one withdrawal --
   /// from app_settings.min_withdrawal_amount, via get_withdrawal_settings()
