@@ -1,0 +1,29 @@
+{
+  "project_info": {
+    "project_number": "811251305590",
+    "project_id": "sgx-partner",
+    "storage_bucket": "sgx-partner.firebasestorage.app"
+  },
+  "client": [
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:811251305590:android:b8d00d2f980178e9032357",
+        "android_client_info": {
+          "package_name": "com.sgx.partner"
+        }
+      },
+      "oauth_client": [],
+      "api_key": [
+        {
+          "current_key": "AIzaSyD7RusrL7U-dZmuiMwJQBAGd6-FeaasSws"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": []
+        }
+      }
+    }
+  ],
+  "configuration_version": "1"
+}

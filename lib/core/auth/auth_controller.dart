@@ -4,6 +4,8 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:supabase_flutter/supabase_flutter.dart' show Supabase;
 
 import '../../shared/models/profile_summary.dart';
+import '../notifications/push_notifications_service.dart';
+import '../notifications/push_token_repository.dart';
 import 'auth_repository.dart';
 import 'auth_state.dart';
 import 'supabase_auth_repository.dart';
@@ -76,6 +78,19 @@ class AuthController extends Notifier<AuthState> {
   }
 
   Future<void> signOut() async {
+    // Push teardown has to happen here, before the session goes away, and
+    // not in a listener reacting to the state change below.
+    //
+    // Clearing `profiles.fcm_token` is an authenticated UPDATE gated by
+    // RLS (`auth.uid() = id`). Once `authRepository.signOut()` has run
+    // there is no JWT left, so that write would be rejected and this
+    // install's token would stay live on a row that no longer belongs to
+    // anyone using the phone -- meaning the next partner to log in here
+    // would have their notifications delivered to the previous partner's
+    // registration.
+    await ref.read(pushTokenRepositoryProvider).clearToken();
+    await ref.read(pushNotificationsServiceProvider).deleteToken();
+
     await ref.read(authRepositoryProvider).signOut();
     state = const AuthState.signedOut();
   }

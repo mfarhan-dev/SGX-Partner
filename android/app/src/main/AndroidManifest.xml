@@ -2,6 +2,10 @@
     <uses-permission android:name="android.permission.CAMERA" />
     <uses-permission android:name="android.permission.ACCESS_FINE_LOCATION" />
     <uses-permission android:name="android.permission.ACCESS_COARSE_LOCATION" />
+    <!-- Android 13+ (API 33) gates notifications behind a runtime grant.
+         Requested at the point of use by PushNotificationsService, not at
+         launch. -->
+    <uses-permission android:name="android.permission.POST_NOTIFICATIONS" />
     <application
         android:label="SGX Partners"
         android:name="${applicationName}"
@@ -28,6 +32,28 @@
                 <category android:name="android.intent.category.LAUNCHER"/>
             </intent-filter>
         </activity>
+        <!-- FCM notifications that arrive while the app is backgrounded or
+             killed are posted by the Firebase SDK itself, which needs to be
+             told which channel to use. This id must match the channel
+             PushNotificationsService creates on startup, otherwise Android
+             silently drops the notification to low importance (no heads-up,
+             no sound). -->
+        <meta-data
+            android:name="com.google.firebase.messaging.default_notification_channel_id"
+            android:value="sgx_partners_high_importance" />
+
+        <!-- Android draws a notification's small icon from its ALPHA channel
+             only, tinted flat. Both launcher PNGs are RGB with no alpha, so
+             leaving this unset makes every notification show a solid white
+             square. ic_stat_sgx is the SGX mark as a proper transparent
+             silhouette. -->
+        <meta-data
+            android:name="com.google.firebase.messaging.default_notification_icon"
+            android:resource="@drawable/ic_stat_sgx" />
+        <meta-data
+            android:name="com.google.firebase.messaging.default_notification_color"
+            android:resource="@color/sgx_notification_accent" />
+
         <!-- Don't delete the meta-data below.
              This is used by the Flutter tool to generate GeneratedPluginRegistrant.java -->
         <meta-data

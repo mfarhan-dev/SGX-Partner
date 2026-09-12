@@ -9,6 +9,16 @@
 # packages, and plugins designed to encourage good coding practices.
 include: package:flutter_lints/flutter.yaml
 
+analyzer:
+  exclude:
+    # Flutter's Swift Package Manager integration copies whole plugin
+    # source trees (including their own `test/` folders) under here during
+    # `pub get`. Those are not our code, they are gitignored, and their
+    # test files reference dev-only mocks that aren't resolvable from this
+    # project -- so analyzing them only produces hundreds of errors that
+    # no change in `lib/` can fix.
+    - build/**
+
 linter:
   # The lint rules applied to this project can be customized in the
   # section below to disable rules from the `package:flutter_lints/flutter.yaml`

@@ -1,4 +1,7 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources>
     <color name="sgx_icon_background">#FFFFFF</color>
+    <!-- AppColors.primary. Tints the small icon and the app name on
+         an expanded notification. -->
+    <color name="sgx_notification_accent">#C2272B</color>
 </resources>
