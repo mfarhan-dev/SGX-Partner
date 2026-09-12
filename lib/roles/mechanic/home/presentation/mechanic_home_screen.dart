@@ -8,6 +8,7 @@ import '../../../../shared/models/money_amount.dart';
 import '../../../../shared/widgets/partner_greeting.dart';
 import '../../../../shared/widgets/sgx_cards.dart';
 import '../../../../shared/withdrawals/data/withdrawals_providers.dart';
+import '../../../../shared/withdrawals/presentation/widgets/withdrawal_activity_card.dart';
 import '../../profile/data/mechanic_profile_providers.dart';
 import '../../withdrawals/presentation/mechanic_withdraw_money_screen.dart';
 
@@ -22,6 +23,7 @@ class MechanicHomeScreen extends ConsumerWidget {
     final profileAsync = ref.watch(mechanicProfileDataProvider);
     final campaignsAsync = ref.watch(activeCampaignsProvider);
     final withdrawalsAsync = ref.watch(withdrawalsListProvider);
+    final minAmountAsync = ref.watch(minWithdrawalAmountProvider);
 
     // Real running balance -- credited the instant a QR code is scanned
     // (see scan_qr_code()/credit_points_on_qr_scan on the database
@@ -82,14 +84,14 @@ class MechanicHomeScreen extends ConsumerWidget {
               pending: pending,
               lifetime: available,
               compact: true,
+              minWithdrawalAmount: minAmountAsync.value,
               onWithdraw: () => showMechanicWithdrawMoneySheet(context, ref),
             ),
             if (activeWithdrawal != null) ...[
               const SizedBox(height: AppSpacing.md),
-              WithdrawalStatusCard(
+              WithdrawalActivityCard(
                 withdrawal: activeWithdrawal,
                 routePrefix: '/mechanic/withdrawals',
-                availableBalance: available,
               ),
             ],
             const SizedBox(height: AppSpacing.md),

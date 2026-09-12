@@ -49,6 +49,16 @@ final minWithdrawalAmountProvider = FutureProvider<int>((ref) async {
   return repository.getMinWithdrawalAmount();
 });
 
+/// Signed URL for one withdrawal's payment-proof screenshot, keyed by
+/// its raw storage path (Withdrawal.proofStoragePath). `.autoDispose`
+/// + `.family` -- only ever watched from the Detail screen for
+/// whichever withdrawal is open, never needed on Home or the list.
+final withdrawalProofUrlProvider = FutureProvider.autoDispose
+    .family<String?, String>((ref, storagePath) async {
+      final repository = ref.watch(withdrawalsRepositoryProvider);
+      return repository.getProofImageUrl(storagePath);
+    });
+
 /// Every payout account the signed-in partner has saved, oldest-added
 /// first -- one shared provider for both roles, same reasoning as
 /// [withdrawalsListProvider] (session-cached, not `.autoDispose`;

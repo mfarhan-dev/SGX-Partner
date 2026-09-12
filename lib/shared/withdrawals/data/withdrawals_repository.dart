@@ -21,6 +21,13 @@ abstract interface class WithdrawalsRepository {
 
   Future<Withdrawal> disputeReceived(String withdrawalId, String reason);
 
+  /// Signed, time-limited URL for a withdrawal's payment-proof
+  /// screenshot -- pass [storagePath] straight from
+  /// Withdrawal.proofStoragePath. Returns null if signing fails (e.g.
+  /// the file was since deleted); never throws, since a missing
+  /// screenshot shouldn't take down the whole detail screen.
+  Future<String?> getProofImageUrl(String storagePath);
+
   /// Rs. minimum a partner is allowed to request in one withdrawal --
   /// from app_settings.min_withdrawal_amount, via get_withdrawal_settings()
   /// since app_settings itself is staff-only readable.

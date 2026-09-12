@@ -79,6 +79,20 @@ class SupabaseWithdrawalsRepository implements WithdrawalsRepository {
   }
 
   @override
+  Future<String?> getProofImageUrl(String storagePath) async {
+    try {
+      // Private bucket, same signed-URL pattern already used for
+      // mechanic/wholesaler profile photos. 1 hour is plenty for one
+      // viewing session without staying valid indefinitely.
+      return await _client.storage
+          .from('withdrawal-proofs')
+          .createSignedUrl(storagePath, 60 * 60);
+    } catch (_) {
+      return null;
+    }
+  }
+
+  @override
   Future<int> getMinWithdrawalAmount() async {
     final row = await _client.rpc('get_withdrawal_settings').single();
     return (row['min_withdrawal_amount'] as num).toInt();

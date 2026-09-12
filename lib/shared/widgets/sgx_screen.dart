@@ -16,6 +16,7 @@ class SgxScreen extends StatelessWidget {
       AppSpacing.md,
       AppSpacing.lg,
     ),
+    this.floatingActionButton,
   });
 
   final String title;
@@ -23,6 +24,7 @@ class SgxScreen extends StatelessWidget {
   final bool showBack;
   final bool showNotifications;
   final EdgeInsetsGeometry padding;
+  final Widget? floatingActionButton;
 
   @override
   Widget build(BuildContext context) {
@@ -35,6 +37,7 @@ class SgxScreen extends StatelessWidget {
       body: SafeArea(
         child: ListView(padding: padding, children: children),
       ),
+      floatingActionButton: floatingActionButton,
     );
   }
 }

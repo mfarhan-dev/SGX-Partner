@@ -8,6 +8,7 @@ import '../../../../shared/models/money_amount.dart';
 import '../../../../shared/widgets/partner_greeting.dart';
 import '../../../../shared/widgets/sgx_cards.dart';
 import '../../../../shared/withdrawals/data/withdrawals_providers.dart';
+import '../../../../shared/withdrawals/presentation/widgets/withdrawal_activity_card.dart';
 import '../../profile/data/wholesaler_profile_providers.dart';
 import '../../withdrawals/presentation/wholesaler_withdraw_money_screen.dart';
 
@@ -22,6 +23,7 @@ class WholesalerHomeScreen extends ConsumerWidget {
     final profileAsync = ref.watch(wholesalerProfileDataProvider);
     final campaignsAsync = ref.watch(activeCampaignsProvider);
     final withdrawalsAsync = ref.watch(withdrawalsListProvider);
+    final minAmountAsync = ref.watch(minWithdrawalAmountProvider);
 
     // Real running balance -- credited the instant a mechanic scans a
     // QR code tied to one of this wholesaler's invoices (see
@@ -82,15 +84,15 @@ class WholesalerHomeScreen extends ConsumerWidget {
               available: available,
               pending: pending,
               lifetime: available,
+              minWithdrawalAmount: minAmountAsync.value,
               onWithdraw: () => showWholesalerWithdrawMoneySheet(context, ref),
               compact: true,
             ),
             if (activeWithdrawal != null) ...[
               const SizedBox(height: AppSpacing.md),
-              WithdrawalStatusCard(
+              WithdrawalActivityCard(
                 withdrawal: activeWithdrawal,
                 routePrefix: '/wholesaler/withdrawals',
-                availableBalance: available,
               ),
             ],
             const SizedBox(height: AppSpacing.md),

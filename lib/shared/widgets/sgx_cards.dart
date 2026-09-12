@@ -19,6 +19,7 @@ class WalletHeroCard extends StatelessWidget {
     required this.pending,
     required this.lifetime,
     required this.onWithdraw,
+    this.minWithdrawalAmount,
     this.compact = false,
   });
 
@@ -26,6 +27,20 @@ class WalletHeroCard extends StatelessWidget {
   final MoneyAmount pending;
   final MoneyAmount lifetime;
   final VoidCallback onWithdraw;
+
+  /// Rs. minimum from app_settings, via minWithdrawalAmountProvider --
+  /// shown as a quiet, always-visible caption under the button, never
+  /// used to disable it. A disabled button here would tell a partner
+  /// nothing about *why* (Nielsen Norman Group's own guidance: disabled
+  /// buttons "confuse users by appearing clickable but providing no
+  /// response or feedback"), which matters even more for a first-time,
+  /// possibly-low-literacy audience. The Withdraw Money sheet this
+  /// button opens already validates the amount properly -- tapping
+  /// Continue below the minimum shows a clear, readable inline message
+  /// there ("Minimum withdrawal amount is Rs. 100.") instead of a
+  /// fleeting toast. One clear explanation, in one place, always
+  /// reachable.
+  final int? minWithdrawalAmount;
   final bool compact;
 
   @override
@@ -121,6 +136,18 @@ class WalletHeroCard extends StatelessWidget {
                   label: const Text('Withdraw Money'),
                 ),
               ),
+              if (minWithdrawalAmount != null) ...[
+                const SizedBox(height: 6),
+                Text(
+                  'Minimum Rs. $minWithdrawalAmount per withdrawal',
+                  textAlign: TextAlign.center,
+                  style: const TextStyle(
+                    color: Colors.white70,
+                    fontSize: 11,
+                    fontWeight: FontWeight.w600,
+                  ),
+                ),
+              ],
             ],
           ),
         ],
@@ -505,164 +532,6 @@ class TransactionRow extends StatelessWidget {
   }
 }
 
-/// Home's "current withdrawal" banner. Only ever shown for a withdrawal
-/// that is NOT terminal (pending/paymentSent/disputed) -- the caller is
-/// responsible for picking that row and not rendering this at all when
-/// there isn't one, so a partner who has never requested a withdrawal
-/// sees nothing here instead of stale/fake status.
-class WithdrawalStatusCard extends StatelessWidget {
-  const WithdrawalStatusCard({
-    super.key,
-    required this.withdrawal,
-    required this.routePrefix,
-    required this.availableBalance,
-  });
-
-  final Withdrawal withdrawal;
-  final String routePrefix;
-  final MoneyAmount availableBalance;
-
-  @override
-  Widget build(BuildContext context) {
-    final status = withdrawal.status;
-    final color = _statusColor(status);
-    final paymentSent = status == WithdrawalStatus.paymentSent;
-    final title = switch (status) {
-      WithdrawalStatus.paymentSent => 'Payment sent by SGX',
-      WithdrawalStatus.disputed => 'Withdrawal needs review',
-      _ => 'Withdrawal requested',
-    };
-    final statusLabel = paymentSent ? 'Confirm' : status.label;
-    final remaining = MoneyAmount(
-      cents: (availableBalance.cents - withdrawal.amount.cents).clamp(
-        0,
-        availableBalance.cents,
-      ),
-    );
-
-    return Card(
-      margin: EdgeInsets.zero,
-      color: paymentSent ? null : AppColors.warningContainer,
-      child: InkWell(
-        borderRadius: BorderRadius.circular(12),
-        onTap: () => context.push('$routePrefix/${withdrawal.id}'),
-        child: Padding(
-          padding: const EdgeInsets.all(AppSpacing.md),
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              Row(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  CircleAvatar(
-                    backgroundColor: color.withValues(alpha: 0.13),
-                    child: Icon(_statusIcon(status), color: color),
-                  ),
-                  const SizedBox(width: AppSpacing.sm),
-                  Expanded(
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        Row(
-                          children: [
-                            Expanded(
-                              child: Text(
-                                title,
-                                style: Theme.of(context).textTheme.titleMedium,
-                              ),
-                            ),
-                            _MiniPill(label: statusLabel, color: color),
-                          ],
-                        ),
-                        const SizedBox(height: 4),
-                        Text(
-                          '${MoneyFormatter.format(withdrawal.amount)} · ${withdrawal.method.label} · ${_formatDate(withdrawal.requestedAt)}',
-                          style: Theme.of(context).textTheme.bodySmall
-                              ?.copyWith(color: AppColors.mutedText),
-                        ),
-                      ],
-                    ),
-                  ),
-                  const SizedBox(width: AppSpacing.xs),
-                  const Icon(Icons.chevron_right),
-                ],
-              ),
-              const SizedBox(height: AppSpacing.md),
-              Row(
-                children: [
-                  Expanded(
-                    child: _WithdrawalAmountBox(
-                      label: paymentSent ? 'Withdrawn' : 'Requested',
-                      value: MoneyFormatter.format(withdrawal.amount),
-                    ),
-                  ),
-                  const SizedBox(width: AppSpacing.sm),
-                  Expanded(
-                    child: _WithdrawalAmountBox(
-                      label: paymentSent ? 'Left to withdraw' : 'Available',
-                      value: MoneyFormatter.format(
-                        paymentSent ? remaining : availableBalance,
-                      ),
-                    ),
-                  ),
-                ],
-              ),
-              const SizedBox(height: AppSpacing.sm),
-              Text(
-                switch (status) {
-                  WithdrawalStatus.paymentSent =>
-                    'Confirm only after the amount is received.',
-                  WithdrawalStatus.disputed =>
-                    withdrawal.disputeReason ??
-                        'SGX is reviewing this payment problem.',
-                  _ =>
-                    'SGX is reviewing the request. No action is required right now.',
-                },
-                style: Theme.of(
-                  context,
-                ).textTheme.bodySmall?.copyWith(color: AppColors.mutedText),
-              ),
-              if (paymentSent) ...[
-                const SizedBox(height: AppSpacing.sm),
-                SizedBox(
-                  width: double.infinity,
-                  child: FilledButton(
-                    onPressed: () =>
-                        context.push('$routePrefix/${withdrawal.id}'),
-                    child: const Text('Confirm received'),
-                  ),
-                ),
-              ],
-            ],
-          ),
-        ),
-      ),
-    );
-  }
-
-  IconData _statusIcon(WithdrawalStatus status) {
-    return switch (status) {
-      WithdrawalStatus.paymentSent => Icons.send_outlined,
-      WithdrawalStatus.confirmed ||
-      WithdrawalStatus.autoConfirmed => Icons.check_circle_outline,
-      WithdrawalStatus.disputed => Icons.error_outline,
-      WithdrawalStatus.refunded => Icons.replay_outlined,
-      WithdrawalStatus.pending => Icons.schedule_outlined,
-    };
-  }
-
-  Color _statusColor(WithdrawalStatus status) {
-    return switch (status) {
-      WithdrawalStatus.confirmed ||
-      WithdrawalStatus.autoConfirmed ||
-      WithdrawalStatus.refunded => AppColors.success,
-      WithdrawalStatus.disputed => AppColors.error,
-      WithdrawalStatus.paymentSent => AppColors.primary,
-      WithdrawalStatus.pending => AppColors.warning,
-    };
-  }
-}
-
 String _formatDate(DateTime dateTime) {
   final local = dateTime.toLocal();
   final now = DateTime.now();
@@ -673,45 +542,6 @@ String _formatDate(DateTime dateTime) {
   return isToday
       ? 'Today · ${DateFormat('h:mm a').format(local)}'
       : DateFormat('d MMM y').format(local);
-}
-
-class _WithdrawalAmountBox extends StatelessWidget {
-  const _WithdrawalAmountBox({required this.label, required this.value});
-
-  final String label;
-  final String value;
-
-  @override
-  Widget build(BuildContext context) {
-    return Container(
-      padding: const EdgeInsets.all(AppSpacing.sm),
-      decoration: BoxDecoration(
-        color: AppColors.surfaceContainer,
-        borderRadius: BorderRadius.circular(12),
-      ),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Text(
-            label,
-            style: Theme.of(context).textTheme.labelSmall?.copyWith(
-              color: AppColors.mutedText,
-              fontWeight: FontWeight.w800,
-            ),
-          ),
-          const SizedBox(height: 2),
-          Text(
-            value,
-            maxLines: 1,
-            overflow: TextOverflow.ellipsis,
-            style: Theme.of(
-              context,
-            ).textTheme.titleSmall?.copyWith(fontWeight: FontWeight.w900),
-          ),
-        ],
-      ),
-    );
-  }
 }
 
 class WithdrawalCard extends StatelessWidget {

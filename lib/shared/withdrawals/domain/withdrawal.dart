@@ -15,6 +15,8 @@ class Withdrawal {
     this.disputeReason,
     this.paymentSentAt,
     this.confirmedAt,
+    this.disputedAt,
+    this.proofStoragePath,
   });
 
   /// Reads one row exactly as returned by the `withdrawals` table /
@@ -37,6 +39,10 @@ class Withdrawal {
       confirmedAt: row['confirmed_at'] == null
           ? null
           : DateTime.parse(row['confirmed_at'] as String),
+      disputedAt: row['disputed_at'] == null
+          ? null
+          : DateTime.parse(row['disputed_at'] as String),
+      proofStoragePath: row['proof_storage_path'] as String?,
     );
   }
 
@@ -51,4 +57,11 @@ class Withdrawal {
   final DateTime requestedAt;
   final DateTime? paymentSentAt;
   final DateTime? confirmedAt;
+  final DateTime? disputedAt;
+
+  /// Raw storage path into the private `withdrawal-proofs` bucket --
+  /// admin's screenshot proof that payment was sent. Null for older
+  /// withdrawals from before this existed, or ones sent without one.
+  /// A raw path, not a URL -- see WithdrawalsRepository.getProofImageUrl.
+  final String? proofStoragePath;
 }

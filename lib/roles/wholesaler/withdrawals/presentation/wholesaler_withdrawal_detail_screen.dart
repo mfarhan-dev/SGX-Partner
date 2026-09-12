@@ -1,14 +1,19 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-import 'package:intl/intl.dart';
+import 'package:google_fonts/google_fonts.dart';
+import 'package:url_launcher/url_launcher.dart';
 
 import '../../../../app/theme/app_colors.dart';
 import '../../../../app/theme/app_spacing.dart';
 import '../../../../core/utils/money_formatter.dart';
 import '../../../../shared/widgets/sgx_screen.dart';
+import '../../../../shared/widgets/whatsapp_fab.dart';
 import '../../../../shared/withdrawals/data/withdrawals_providers.dart';
 import '../../../../shared/withdrawals/domain/withdrawal.dart';
+import '../../../../shared/withdrawals/domain/withdrawal_activity_event.dart';
 import '../../../../shared/withdrawals/domain/withdrawal_status.dart';
+import '../../../../shared/withdrawals/presentation/widgets/withdrawal_status_chip.dart';
+import '../../../../shared/withdrawals/presentation/widgets/withdrawal_timeline_list.dart';
 import '../../profile/data/wholesaler_profile_providers.dart';
 
 class WholesalerWithdrawalDetailScreen extends ConsumerWidget {
@@ -22,11 +27,19 @@ class WholesalerWithdrawalDetailScreen extends ConsumerWidget {
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final withdrawalAsync = ref.watch(withdrawalDetailProvider(withdrawalId));
+    // Same admin WhatsApp number Settings already fetches -- reused
+    // here for the floating contact button instead of the old
+    // do-nothing stub button.
+    final profileAsync = ref.watch(wholesalerProfileDataProvider);
+    final whatsappNumber = profileAsync.value?.adminWhatsappNumber;
 
     return SgxScreen(
       title: 'Withdrawal Detail',
       showBack: true,
       showNotifications: false,
+      floatingActionButton: WhatsAppFab(
+        onPressed: () => _contactSgx(context, whatsappNumber),
+      ),
       children: [
         withdrawalAsync.when(
           data: (withdrawal) => _WithdrawalDetailBody(withdrawal: withdrawal),
@@ -49,6 +62,36 @@ class WholesalerWithdrawalDetailScreen extends ConsumerWidget {
   }
 }
 
+/// Same wa.me deep link logic as the Settings screen's own "Contact
+/// SGX" row.
+Future<void> _contactSgx(BuildContext context, String? whatsappNumber) async {
+  if (whatsappNumber == null || whatsappNumber.isEmpty) return;
+
+  final digits = whatsappNumber.replaceAll(RegExp(r'[^0-9]'), '');
+  // wa.me needs a full international number with no leading 0 -- treat
+  // an 11-digit number starting with 0 as a local PK number missing
+  // its 92 country code, same convention used elsewhere in this app.
+  final international = digits.startsWith('0')
+      ? '92${digits.substring(1)}'
+      : digits;
+
+  final uri = Uri.parse('https://wa.me/$international');
+  final launched = await launchUrl(uri, mode: LaunchMode.externalApplication);
+
+  if (!launched && context.mounted) {
+    ScaffoldMessenger.of(
+      context,
+    ).showSnackBar(const SnackBar(content: Text('Could not open WhatsApp.')));
+  }
+}
+
+/// Header order is amount &rarr; status &rarr; method/reference -- the
+/// status chip sits right under the number it's describing instead of
+/// floating above it before you've even seen what it's the status OF.
+/// Timeline events (real source once the audit_logs RPC lands, see
+/// [buildWithdrawalActivityEvents]'s own doc comment) render in full via
+/// [WithdrawalTimelineList] -- this screen is the one place the
+/// complete history shows; Home's own card stays a compact summary.
 class _WithdrawalDetailBody extends ConsumerStatefulWidget {
   const _WithdrawalDetailBody({required this.withdrawal});
 
@@ -65,8 +108,19 @@ class _WithdrawalDetailBodyState extends ConsumerState<_WithdrawalDetailBody> {
   @override
   Widget build(BuildContext context) {
     final withdrawal = widget.withdrawal;
-    final status = withdrawal.status;
-    final awaitingConfirmation = status == WithdrawalStatus.paymentSent;
+    final awaitingConfirmation =
+        withdrawal.status == WithdrawalStatus.paymentSent;
+    // Only fetched when a proof actually exists on this withdrawal --
+    // older withdrawals or ones sent without a screenshot never hit
+    // storage at all.
+    final proofPath = withdrawal.proofStoragePath;
+    final proofUrlAsync = proofPath == null
+        ? null
+        : ref.watch(withdrawalProofUrlProvider(proofPath));
+    final events = buildWithdrawalActivityEvents(
+      withdrawal,
+      proofImageUrl: proofUrlAsync?.value,
+    );
 
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
@@ -74,113 +128,37 @@ class _WithdrawalDetailBodyState extends ConsumerState<_WithdrawalDetailBody> {
         Center(
           child: Column(
             children: [
-              const Text('Withdrawal amount'),
               Text(
                 MoneyFormatter.format(withdrawal.amount),
-                style: Theme.of(context).textTheme.displaySmall,
-              ),
-              Chip(
-                avatar: Icon(_statusIcon(status), size: 16),
-                label: Text(status.label),
+                // Sora, same display face every approved mockup for
+                // this app has used -- heavier weight and tighter
+                // letter-spacing than the plain Material default so
+                // the number this whole screen is about actually
+                // reads as the headline, matching WalletHeroCard's
+                // own big-amount treatment on Home.
+                style: GoogleFonts.sora(
+                  fontSize: 36,
+                  fontWeight: FontWeight.w800,
+                  letterSpacing: -1,
+                  color: AppColors.textOf(context),
+                ),
               ),
               const SizedBox(height: AppSpacing.sm),
-              Text('${withdrawal.method.label} · ${withdrawal.withdrawalNo}'),
+              WithdrawalStatusChip(withdrawal: withdrawal),
+              const SizedBox(height: AppSpacing.sm),
+              Text(
+                '${withdrawal.method.label} · ${withdrawal.withdrawalNo}',
+                style: TextStyle(color: AppColors.mutedTextOf(context)),
+              ),
             ],
           ),
         ),
         const SizedBox(height: AppSpacing.lg),
-        if (awaitingConfirmation)
-          Card(
-            color: AppColors.surfaceContainerOf(context),
-            child: Padding(
-              padding: const EdgeInsets.all(AppSpacing.md),
-              child: Column(
-                children: [
-                  Text(
-                    'Did you receive ${MoneyFormatter.format(withdrawal.amount)}?',
-                    style: Theme.of(context).textTheme.titleMedium,
-                  ),
-                  const SizedBox(height: AppSpacing.sm),
-                  const Text(
-                    'If you do not respond, SGX may auto-confirm this payment after the processing window.',
-                  ),
-                  const SizedBox(height: AppSpacing.md),
-                  Row(
-                    children: [
-                      Expanded(
-                        child: OutlinedButton(
-                          onPressed: _submitting ? null : _disputeReceived,
-                          child: const Text('Not Received'),
-                        ),
-                      ),
-                      const SizedBox(width: AppSpacing.sm),
-                      Expanded(
-                        flex: 2,
-                        child: FilledButton(
-                          onPressed: _submitting ? null : _confirmReceived,
-                          child: _submitting
-                              ? const SizedBox(
-                                  width: 18,
-                                  height: 18,
-                                  child: CircularProgressIndicator(
-                                    strokeWidth: 2,
-                                  ),
-                                )
-                              : const Text('Yes, Received'),
-                        ),
-                      ),
-                    ],
-                  ),
-                ],
-              ),
-            ),
-          )
-        else if (status == WithdrawalStatus.disputed)
-          Card(
-            color: AppColors.errorContainer,
-            child: Padding(
-              padding: const EdgeInsets.all(AppSpacing.md),
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Text(
-                    'Under review',
-                    style: Theme.of(context).textTheme.titleMedium,
-                  ),
-                  const SizedBox(height: 4),
-                  Text(
-                    withdrawal.disputeReason ??
-                        'SGX is investigating this payment.',
-                  ),
-                ],
-              ),
-            ),
-          ),
-        const SizedBox(height: AppSpacing.md),
-        _TimelineStep(
-          done: true,
-          title: 'Submitted',
-          note: _formatTimestamp(withdrawal.requestedAt),
-        ),
-        _TimelineStep(
-          done: withdrawal.paymentSentAt != null,
-          title: 'Payment sent by SGX',
-          note: withdrawal.paymentSentAt != null
-              ? _formatTimestamp(withdrawal.paymentSentAt!)
-              : 'Waiting for SGX to send payment',
-        ),
-        _TimelineStep(
-          done: status.isTerminal,
-          title: switch (status) {
-            WithdrawalStatus.disputed => 'Under review by SGX',
-            WithdrawalStatus.refunded => 'Refunded to your balance',
-            _ => 'Payment confirmation',
-          },
-          note: withdrawal.confirmedAt != null
-              ? _formatTimestamp(withdrawal.confirmedAt!)
-              : awaitingConfirmation
-              ? 'Waiting for your response'
-              : 'Not yet reached',
+        WithdrawalTimelineList(
+          events: events,
+          submitting: _submitting,
+          onConfirmReceived: awaitingConfirmation ? _confirmReceived : null,
+          onNotReceived: awaitingConfirmation ? _disputeReceived : null,
         ),
       ],
     );
@@ -231,18 +209,6 @@ class _WithdrawalDetailBodyState extends ConsumerState<_WithdrawalDetailBody> {
       if (mounted) setState(() => _submitting = false);
     }
   }
-
-  IconData _statusIcon(WithdrawalStatus status) => switch (status) {
-    WithdrawalStatus.paymentSent => Icons.send,
-    WithdrawalStatus.confirmed ||
-    WithdrawalStatus.autoConfirmed => Icons.check_circle,
-    WithdrawalStatus.disputed => Icons.error,
-    WithdrawalStatus.refunded => Icons.replay,
-    WithdrawalStatus.pending => Icons.schedule,
-  };
-
-  String _formatTimestamp(DateTime dateTime) =>
-      DateFormat('d MMM, h:mm a').format(dateTime.toLocal());
 }
 
 class _DisputeReasonDialog extends StatefulWidget {
@@ -268,7 +234,7 @@ class _DisputeReasonDialogState extends State<_DisputeReasonDialog> {
         autofocus: true,
         maxLines: 3,
         decoration: const InputDecoration(
-          hintText: 'e.g. Amount not received in my bank account',
+          hintText: 'e.g. Amount not received in my JazzCash account',
         ),
       ),
       actions: [
@@ -287,35 +253,6 @@ class _DisputeReasonDialogState extends State<_DisputeReasonDialog> {
           child: const Text('Submit'),
         ),
       ],
-    );
-  }
-}
-
-class _TimelineStep extends StatelessWidget {
-  const _TimelineStep({
-    required this.done,
-    required this.title,
-    required this.note,
-  });
-
-  final bool done;
-  final String title;
-  final String note;
-
-  @override
-  Widget build(BuildContext context) {
-    return ListTile(
-      leading: CircleAvatar(
-        backgroundColor: done
-            ? AppColors.primary
-            : AppColors.surfaceContainerOf(context),
-        child: Icon(
-          done ? Icons.check : Icons.circle_outlined,
-          color: done ? Colors.white : AppColors.mutedTextOf(context),
-        ),
-      ),
-      title: Text(title),
-      subtitle: Text(note),
     );
   }
 }
