@@ -6,7 +6,6 @@ import '../../app/theme/app_colors.dart';
 import '../../app/theme/app_spacing.dart';
 import '../../core/utils/money_formatter.dart';
 import '../campaigns/domain/active_campaign.dart';
-import '../mock/sgx_mock_data.dart';
 import '../models/money_amount.dart';
 import '../products/domain/catalog_product.dart';
 import '../withdrawals/domain/withdrawal.dart';
@@ -488,46 +487,6 @@ class _CampaignCarouselState extends State<CampaignCarousel> {
           ],
         ),
       ],
-    );
-  }
-}
-
-class TransactionRow extends StatelessWidget {
-  const TransactionRow({super.key, required this.transaction});
-
-  final MockTransaction transaction;
-
-  @override
-  Widget build(BuildContext context) {
-    final positive = transaction.amount.cents >= 0;
-    return ListTile(
-      contentPadding: EdgeInsets.zero,
-      leading: CircleAvatar(
-        backgroundColor: transaction.tone.withValues(alpha: 0.13),
-        child: Icon(transaction.icon, color: transaction.tone),
-      ),
-      title: Text(transaction.title),
-      subtitle: Text(transaction.subtitle),
-      trailing: Column(
-        mainAxisAlignment: MainAxisAlignment.center,
-        crossAxisAlignment: CrossAxisAlignment.end,
-        children: [
-          Text(
-            MoneyFormatter.format(transaction.amount),
-            style: TextStyle(
-              color: positive ? AppColors.success : AppColors.text,
-              fontWeight: FontWeight.w800,
-            ),
-          ),
-          if (transaction.status != null)
-            Text(
-              transaction.status!,
-              style: Theme.of(
-                context,
-              ).textTheme.labelSmall?.copyWith(color: transaction.tone),
-            ),
-        ],
-      ),
     );
   }
 }

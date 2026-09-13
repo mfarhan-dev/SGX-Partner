@@ -1,66 +1,53 @@
-# SGX Partner — Handoff (2026-09-09)
+# SGX Partner — Handoff (2026-09-13)
 
 ## What this app is
-Flutter B2B app for SGX Partners (auto-parts wholesaler). Two roles: **mechanic** and **wholesaler**, each with their own shell/tabs. Backend is Supabase (Postgres + RLS + `SECURITY DEFINER` RPCs + triggers). Project ref: `ghojtefwuzubqguqcbwc`.
+Flutter B2B app for SGX Partners (auto-parts wholesaler). Two roles — **mechanic** and **wholesaler** — each with their own shell/bottom-nav/screens. Backend is Supabase (Postgres + RLS + `SECURITY DEFINER` RPCs + triggers). Project ref: `ghojtefwuzubqguqcbwc`.
+
+Git is clean as of this handoff — everything below through commit `16a6624` is committed on `main`.
 
 ## Standing rules (do not break these)
-- **Never `git commit` unless explicitly told to.** The user reviews every change on-device first, then says "commit" explicitly.
-- Run `dart format` + `flutter analyze` after every Dart edit — must be clean before reporting done.
-- Never do blind ADB/device interaction.
-- Before any DB/schema change: check via Supabase advisors (`get_advisors`) and `information_schema.routine_privileges`.
-- User wants tasks narrated one at a time — "what are you going to do, how are you going to do it" — before/while doing them. Don't batch multiple unrelated tasks silently.
+- **Never `git commit` unless explicitly told to.** The user verifies every change on-device (or via Supabase directly, for DB work) first, then explicitly says "commit."
+- Run `dart format` + `flutter analyze` (must be clean) + a real `flutter build apk --debug --target-platform android-arm64` after every Dart change, before reporting done.
+- Before any DB/schema change: check `get_advisors` (security) before and after, verify real ownership/RLS behavior with actual impersonated queries (`set local request.jwt.claims`), and for any test data use a fixture that is fully deleted afterward with a verified zero-leftover check. Disclose whenever a real production row is touched (not just a fixture).
 - Dark mode: always use `AppColors.xOf(context)` theme-aware helpers, never hardcoded light-only `AppColors.text`/`.mutedText` literals.
 - Card taps: use `context.push()` not `context.go()` so back-navigation works.
-- Session-cached data (profile, ledger, etc.) uses plain `FutureProvider` (NOT `.autoDispose`) because tab screens sit under a `ShellRoute` that fully unmounts on tab switch — autoDispose would refetch every visit.
+- Session-cached data (profile, ledger, withdrawals list, payout accounts, etc.) uses plain `FutureProvider` (NOT `.autoDispose`) because tab screens sit under a `ShellRoute` that fully unmounts on tab switch — `.autoDispose` would refetch on every visit. Per-item detail providers (a single withdrawal, a signed proof URL, a payment-history read) correctly ARE `.autoDispose.family` since they're reached by push, not as a persistent tab.
+- Mechanic and wholesaler screens are near-exact mirrors; when one is changed, mirror the change to the other (the established pattern is a `sed -e "s/mechanic/wholesaler/g" -e "s/Mechanic/Wholesaler/g"` pass, then a manual re-check).
 
-## Current git status (uncommitted, not yet reviewed by user)
-```
-M lib/roles/mechanic/home/presentation/mechanic_home_screen.dart
-M lib/roles/mechanic/profile/data/mechanic_profile_providers.dart
-M lib/roles/mechanic/profile/domain/mechanic_profile_data.dart
-M lib/roles/wholesaler/home/presentation/wholesaler_home_screen.dart
-M lib/roles/wholesaler/profile/data/wholesaler_profile_providers.dart
-M lib/roles/wholesaler/profile/domain/wholesaler_profile_data.dart
-```
-`dart format` + `flutter analyze` both clean on these 6 files.
+## What's built and working (by module)
 
-## What was just completed: QR scan-to-earn (backend + Home balance)
+- **Auth** — real Supabase phone-OTP login for both roles, session restore.
+- **Onboarding / Profile** — mechanic + wholesaler onboarding forms, real Supabase-backed profile + edit (photo, name, area, address, CNIC, phone re-verification), Settings with real Language/Theme pickers and a working WhatsApp "Contact SGX" deep link.
+- **Home** — real name/photo greeting, real active-campaigns carousel, real points balance, and a real, non-expandable "current withdrawal" activity card.
+- **Mechanic Activity tab** — real end to end (this session), replacing the old 100% mocked `MechanicWalletScreen`. Two new RPCs, `get_mechanic_wallet_summary()` and `get_mechanic_wallet_activity()` (neither table existed before — `khata_entries` is wholesaler-only, and `audit_logs` has no QR-scan-reward or "withdrawal requested" events at all), union confirmed QR-scan rewards (`qr_codes`) with withdrawal lifecycle events unpivoted off `withdrawals`' own timestamp columns. The screen is a pure log (title "Activity", matching the bottom-nav label for the first time) — no balance card or Withdraw button here, since Home already owns those. Removed now-dead code this uncovered: `MockTransaction`/`mechanicTransactions`, the `MockTransaction`-based `TransactionRow` in `sgx_cards.dart`, and the entire orphaned `lib/shared/wallet/` directory (pre-existing, unrelated to this session's change).
+- **Products** — real Supabase-backed catalog (list + detail), mirrored for both roles.
+- **Campaigns** — real active-campaigns carousel + detail screen.
+- **QR scan-to-earn (backend only)** — `mechanics.points_balance` / `wholesalers.points_balance` with guard triggers, `scan_qr_code(p_qr_id)` RPC (credits both mechanic and wholesaler instantly, blocks re-scan), verified end-to-end against a real QR code in an earlier session. **The scanner UI itself is still decorative — see Remaining below.**
+- **Wholesaler khata ledger** — real Supabase-backed ledger replacing the old mocked Activity tab.
+- **Wholesaler QR Progress** — real screen exposing the wholesaler's own QR scan progress.
+- **Firebase** — push notifications, Crashlytics, Remote Config wired in (`97923d3`).
+- **Withdrawals — the full flow, now real end to end:**
+  - Multi-account payout methods with real provider logos, settable from Settings.
+  - Request / Confirm-received / Dispute ("not received"), replacing the old mocks.
+  - **This session's work** (commits `cf6a305`, `16a6624`):
+    - Withdrawal Detail screen fully redesigned (StubHub-style always-expanded timeline, amount → status chip → method/ref header order, Sora display font for the amount, a real WhatsApp FAB replacing a dead no-op button, no per-row actor chip).
+    - Home's withdrawal card redesigned into a fixed, non-expandable dot-strip summary (`WithdrawalActivityCard`) reflecting the real last-3 events.
+    - Admin's payment-proof screenshot embedded on the "Payment sent" timeline step, tap-to-zoom, backed by a new partner-scoped Storage RLS read policy.
+    - **Re-pay handling**: if a payment is disputed and SGX re-pays, the timeline now shows a real, separate "Payment sent again by SGX" step with its own screenshot — backed by a new RPC `get_withdrawal_payment_events()` that reads the partner's own `audit_logs` rows (otherwise staff-only), instead of the `withdrawals` row's single `payment_sent_at`/`proof_storage_path` columns (which only ever hold the *latest* payment and silently lose the earlier one on a re-pay).
+    - **Fixed a real Storage RLS gap**: the proof-read policy matched a file only if it equalled the withdrawal's *current* `proof_storage_path` — so once a re-pay overwrote that column, the first payment's own screenshot became unreadable. Now matches by the withdrawal-id folder prefix, so every proof ever uploaded for a partner's own withdrawal is readable.
+    - **Fixed a real backend bug**: the `enforce_withdrawal_status_transition()` trigger only set `payment_sent_at` when it was still `null`, so a re-pay silently left it pinned to the *original* payment time. This fed directly into `auto_confirm_stale_withdrawals()`'s 3-day window — a re-paid withdrawal could have auto-confirmed almost immediately, based on stale elapsed time, before the partner ever saw the new payment. Now resets on every transition into `payment_sent`. Verified with a real, fully-cleaned-up test fixture.
+  - All of the above verified live in the app by the user against real data (withdrawal WD-0015: disputed then re-paid).
 
-### Business rules confirmed by user
-- Reward "points" (`schemes.mechanic_points`/`wholesaler_points`, `qr_codes.mechanic_reward_snapshot`/`wholesaler_reward_snapshot`) are **whole rupees, 1:1** — no conversion factor. Verified against real `schemes` row "Brake Batay" (mechanic_points: 5, wholesaler_points: 5).
-- Credit is **instant** on scan — no staff approval step.
-- A QR code can be **scanned exactly once** (already enforced by the pre-existing `qr_codes` status state machine: `generated → active|void`, `active → scanned`).
-- Balance must be a **stored running total**, never summed from history — mirrors the existing `khata_balance` guarded pattern.
+## Remaining / known gaps
 
-### DB changes (already applied live via Supabase MCP `apply_migration` — NOT reverted, this is real production schema now)
-1. **`add_mechanic_points_balance_and_guards`** — added `mechanics.points_balance` (int, default 0, check >= 0) + `guard_mechanic_points_balance()`/`guard_wholesaler_points_balance()` trigger functions + triggers on both tables. Pattern: `BEFORE UPDATE` trigger raises an exception unless `current_setting('sgx.points_sync', true) = 'on'` — blocks any direct edit outside the trusted path.
-2. **`credit_points_balance_on_qr_scan`** — `private.credit_points_on_qr_scan()` trigger function: on `qr_codes` status transitioning TO `'scanned'`, flips `sgx.points_sync` on, adds `mechanic_reward_snapshot`/`wholesaler_reward_snapshot` to the respective balances, flips it back off. `AFTER UPDATE` trigger `qr_codes_credit_points_on_scan`.
-3. **`scan_qr_code_function`** — `public.scan_qr_code(p_qr_id text)` `SECURITY DEFINER` RPC: looks up the calling mechanic via `auth.uid()`, locks the `qr_codes` row `for update`, returns `('not_found'|'already_scanned'|'not_active'|'success', reward, new_balance)`. Granted to `authenticated` only (no `anon`).
+1. **QR camera scanning is fully decorative.** `/mechanic/scan` → `QrScannerScreen` (`lib/roles/mechanic/scanner/presentation/qr_scanner_screen.dart`) is a static gradient UI with a "Mock successful scan" button (`_showSuccess`) — there's no camera package wired in at all, and it never calls the real `scan_qr_code(p_qr_id)` RPC that already exists and was verified working in an earlier session. `mechanic_scan_repository.dart` / `scan_history_screen.dart` exist as scaffolding but the actual scan-and-credit path from camera → RPC isn't connected.
 
-**Verified end-to-end** with a real test scan (impersonated a real mechanic via `set local request.jwt.claims`) against real QR code `QR-0022-01-0001` — success, correct balances credited to both mechanic and wholesaler, re-scan correctly returned `already_scanned` with no double-credit. **This touched real production data** (disclosed to user at the time).
+2. **Multi-dispute-cycle history isn't representable yet.** `withdrawals.dispute_reason` / `disputed_at` are single columns — only the *latest* dispute survives. If a withdrawal is ever disputed → re-paid → disputed again, the app has no way to show the first dispute's own reason/timestamp separately. The payment side already got the audit_logs-backed fix this session (`get_withdrawal_payment_events`); the same pattern (a partner-scoped RPC reading `audit_logs` for "Disputed by mechanic/wholesaler" rows) would fix this too, if/when it becomes a real scenario worth handling.
 
-### Flutter changes (this session, the 6 files above)
-- `mechanic_profile_data.dart` / `mechanic_profile_providers.dart`: added `pointsBalance` (int, rupees) field + `points_balance` to the Supabase select + parse into the returned object.
-- `wholesaler_profile_data.dart` / `wholesaler_profile_providers.dart`: same treatment, mirrored exactly.
-- `mechanic_home_screen.dart` / `wholesaler_home_screen.dart`: removed hardcoded `_availableBalance` mock constant. Now:
-  - `available = MoneyAmount(cents: pointsBalance * 100)` from the real profile provider
-  - `pending = MoneyAmount(cents: 0)` (genuinely true — no withdrawal system exists yet)
-  - `lifetime = available` (mathematically true today since nothing has ever reduced `points_balance`) — **flagged with a code comment** that once withdrawals exist, `lifetime` needs its own separate never-decreasing column.
-  - The `WithdrawalStatusCard` mock ("Payment sent by SGX" / "Confirm received") itself was **left untouched** — out of scope for this task, still fully mocked.
+3. **Dead route, low priority:** `/profile/preferences` → `PlaceholderScreen` is defined in `app_routes.dart` but nothing in the app links to it anymore — Settings already has real Language/Theme dialog pickers. Safe to delete whenever someone's cleaning up routes; not urgent.
 
-## Immediate next step (what the user just asked for, not yet started)
-User confirmed the balance wiring is "task 1" of 2 presented options. **Task 2 remains, not started**, and the user has not yet said which to do next — ask them, or resume with:
-
-1. **Real camera-based QR scanning** for `/mechanic/scan` — currently **100% decorative**, no camera integration at all. Needs to call the now-built `scan_qr_code(p_qr_id)` RPC and handle its 4 result states (`success`/`already_scanned`/`not_active`/`not_found`) with appropriate UI feedback.
-2. **QR Progress screen for wholesaler** — needs a **new, not-yet-built** narrow RPC to safely expose the wholesaler's own `qr_codes` aggregate progress, since `qr_codes` remains staff-only `SELECT` (no direct wholesaler read access currently).
-
-## Known future gap (flagged, not to be solved yet)
-Once a withdrawal system is built (no DB table exists for it at all yet), `available` (reducible) and `lifetime earned` (should never reduce) must become two separate stored values — right now they're identical because nothing has ever decremented `points_balance`.
+4. **Home's "Lifetime Earned" is still a copy of "Available", not the real figure.** `available` (reducible) and a true "lifetime earned" (should never reduce) are still the same underlying `points_balance` value on Home. This was flagged as a future gap before withdrawals existed and is still open there — though the new mechanic Activity screen (see above) now shows the *real* lifetime-earned figure via `get_mechanic_wallet_summary()`, so the two screens will visibly disagree for any mechanic whose balance was ever adjusted outside the normal scan/withdraw flow (e.g. a manual test top-up) until Home is switched to the same source.
 
 ## How to resume
-1. Ask the user to review the 6 modified files on-device (Home screens for both roles should now show their real, live rupee balance instead of the old mock numbers).
-2. Once approved, they will explicitly say to commit — do it only then, with:
-   ```
-   Co-Authored-By: Claude Sonnet 5 <noreply@anthropic.com>
-   ```
-3. Ask which of the two "next step" items above to do first (mirrors how this feature's kickoff was handled — always confirm before starting new DB/UI work).
+- For (1) above: the next real user-visible gap. Confirm scope with the user before starting (camera package choice, RPC wiring, UI).
+- Same workflow as always: research/demo (HTML mockup via Artifact when it's UI-driven) → user picks → implement in Flutter → `dart format` + `flutter analyze` + real debug build → user verifies on-device → user explicitly says commit.

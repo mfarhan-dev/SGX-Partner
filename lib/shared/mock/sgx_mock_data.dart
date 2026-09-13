@@ -2,24 +2,6 @@ import 'package:flutter/material.dart';
 
 import '../models/money_amount.dart';
 
-class MockTransaction {
-  const MockTransaction({
-    required this.title,
-    required this.subtitle,
-    required this.amount,
-    required this.icon,
-    required this.tone,
-    this.status,
-  });
-
-  final String title;
-  final String subtitle;
-  final MoneyAmount amount;
-  final IconData icon;
-  final Color tone;
-  final String? status;
-}
-
 class MockWithdrawal {
   const MockWithdrawal({
     required this.id,
@@ -75,33 +57,6 @@ class MockScan {
   final MoneyAmount reward;
   final IconData icon;
 }
-
-const mechanicTransactions = [
-  MockTransaction(
-    title: 'QR reward added',
-    subtitle: 'Shell Advance AX7 · Today',
-    amount: MoneyAmount(cents: 1500),
-    icon: Icons.add_circle_outline,
-    tone: Color(0xFF138A43),
-    status: 'Confirmed',
-  ),
-  MockTransaction(
-    title: 'Withdrawal requested',
-    subtitle: 'JazzCash · Today',
-    amount: MoneyAmount(cents: -150000),
-    icon: Icons.schedule_outlined,
-    tone: Color(0xFFC78300),
-    status: 'Pending',
-  ),
-  MockTransaction(
-    title: 'Payment sent',
-    subtitle: 'EasyPaisa · Yesterday',
-    amount: MoneyAmount(cents: -250000),
-    icon: Icons.send_outlined,
-    tone: Color(0xFF253765),
-    status: 'Confirm now',
-  ),
-];
 
 const mockWithdrawals = [
   MockWithdrawal(
