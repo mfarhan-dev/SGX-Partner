@@ -126,6 +126,21 @@ class AppRoutes {
           withdrawalId: state.pathParameters['withdrawalId'] ?? '',
         ),
       ),
+      // Same reasoning again -- reached by tapping the shell's FAB, not
+      // a tab -- and this one was the exact bug the comment above
+      // already describes for Withdrawals: nested inside the ShellRoute
+      // below, MechanicShell's own bottom nav bar and centered FAB sit
+      // in an ancestor Scaffold that always paints above this route's
+      // content, so no amount of a "hide chrome" flag on the shell can
+      // reliably keep them off a full-bleed camera screen or the
+      // modal sheet it opens -- moving the route out here removes the
+      // shell (and the FAB/nav bar with it) from the tree entirely
+      // while this screen is open, which is what every real QR
+      // scanner (Uber, Venmo, ...) actually does.
+      GoRoute(
+        path: '/mechanic/scan',
+        builder: (_, __) => const QrScannerScreen(),
+      ),
       ShellRoute(
         builder: (_, __, child) => SgxPartnersShell(child: child),
         routes: [
@@ -147,10 +162,6 @@ class AppRoutes {
           GoRoute(
             path: '/mechanic/home',
             builder: (_, __) => const MechanicHomeScreen(),
-          ),
-          GoRoute(
-            path: '/mechanic/scan',
-            builder: (_, __) => const QrScannerScreen(),
           ),
           GoRoute(
             path: '/mechanic/scans',

@@ -25,7 +25,11 @@ class MechanicShell extends ConsumerWidget {
               child: FloatingActionButton(
                 heroTag: null,
                 tooltip: 'Scan QR',
-                onPressed: () => context.go('/mechanic/scan'),
+                // Not a tab -- push (see /mechanic/scan's own route
+                // comment in app_routes.dart) rather than go(), same
+                // convention as every other non-shell route in this
+                // app, so back-navigation from it behaves normally.
+                onPressed: () => context.push('/mechanic/scan'),
                 child: const Icon(Icons.qr_code_scanner),
               ),
             ),
