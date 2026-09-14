@@ -9,6 +9,7 @@ enum ScanFailureReason {
 class ScanResult {
   const ScanResult.success({required this.message, required this.rewardAmount})
     : failureReason = null,
+      code = null,
       claimedByName = null,
       claimedByWorkshop = null,
       claimedAt = null,
@@ -17,6 +18,7 @@ class ScanResult {
   const ScanResult.failure({
     required this.message,
     required this.failureReason,
+    this.code,
     this.claimedByName,
     this.claimedByWorkshop,
     this.claimedAt,
@@ -30,6 +32,12 @@ class ScanResult {
   /// scan_qr_code()'s own `reward` column, so the UI never has to
   /// re-derive it by parsing [message].
   final int? rewardAmount;
+
+  /// The exact code that was scanned/typed -- set on
+  /// [ScanFailureReason.alreadyScanned] so the receipt-style card can
+  /// show which sticker this was, same as a real receipt names the
+  /// order it's about.
+  final String? code;
 
   /// Set only for [ScanFailureReason.alreadyScanned] -- who already
   /// claimed this code, straight from scan_qr_code()'s own

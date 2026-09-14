@@ -77,6 +77,7 @@ class SupabaseMechanicScanRepository implements MechanicScanRepository {
               ? 'You already scanned this code.'
               : 'This QR code has already been claimed.',
           failureReason: ScanFailureReason.alreadyScanned,
+          code: trimmed,
           claimedByName: row['scanned_by_name'] as String?,
           claimedByWorkshop: row['scanned_by_workshop'] as String?,
           claimedAt: claimedAt,

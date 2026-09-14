@@ -14,6 +14,16 @@ import '../../domain/scan_result.dart';
 /// as WithdrawalStatusChip), with the credited amount in the same Sora
 /// display face the Withdrawal Detail screen already uses for money.
 ///
+/// Sized like a real full-screen confirmation state (Google Pay/PayPal
+/// success screens), not a compact card -- this is the only thing on
+/// screen, on a full-height phone display, so it needs to read from
+/// arm's length, not card-sized.
+///
+/// The check/exclamation mark is a plain text glyph (✓ / !), not a
+/// Material icon -- `Icons.check_circle`/`Icons.error_outline` each
+/// draw their own circle baked into the glyph, which doubled up into a
+/// ring-inside-a-ring against the CircleAvatar's own circle.
+///
 /// Three tones, not two: success (green), an honest mistake -- someone
 /// already claimed this sticker, most often the mechanic's own earlier
 /// scan or a colleague's, not fraud -- gets its own amber/informational
@@ -59,7 +69,8 @@ class ScanResultSurface extends StatelessWidget {
         mainAxisSize: MainAxisSize.min,
         children: [
           if (showClaimCard)
-            _ClaimedByCard(
+            _ClaimedReceiptCard(
+              code: result.code,
               name: result.claimedByName,
               workshop: result.claimedByWorkshop,
               when: result.claimedAt != null
@@ -67,71 +78,91 @@ class ScanResultSurface extends StatelessWidget {
                   : null,
             )
           else ...[
-            CircleAvatar(
-              radius: 32,
-              backgroundColor: tone.withValues(alpha: 0.16),
-              child: Icon(
-                success
-                    ? Icons.check_circle
-                    : alreadyScanned
-                    ? Icons.check_circle_outline
-                    : Icons.error_outline,
-                color: tone,
-                size: 36,
-              ),
-            ),
-            const SizedBox(height: AppSpacing.md),
+            _Badge(glyph: success || alreadyScanned ? '✓' : '!', tone: tone),
+            const SizedBox(height: AppSpacing.lg),
             if (success && result.rewardAmount != null)
               Text(
                 '+Rs. ${result.rewardAmount}',
                 style: GoogleFonts.sora(
                   color: Colors.white,
                   fontWeight: FontWeight.w800,
-                  fontSize: 30,
+                  fontSize: 36,
                 ),
               )
             else
               Text(
-                success ? 'Reward added' : "Couldn't add reward",
+                success
+                    ? 'Reward added'
+                    : alreadyScanned
+                    ? 'Already scanned'
+                    : "Couldn't add reward",
                 style: const TextStyle(
                   color: Colors.white,
-                  fontWeight: FontWeight.w700,
-                  fontSize: 17,
+                  fontWeight: FontWeight.w800,
+                  fontSize: 21,
                 ),
               ),
-            const SizedBox(height: 6),
+            const SizedBox(height: 8),
             Text(
               result.message,
               textAlign: TextAlign.center,
-              style: const TextStyle(color: Colors.white70, fontSize: 12.5),
+              style: const TextStyle(color: Colors.white70, fontSize: 14.5),
             ),
           ],
-          const SizedBox(height: AppSpacing.lg),
+          const SizedBox(height: AppSpacing.xl),
           // Success stays the prominent, full-width action -- it's the
           // happy path, real money just moved. A retry (failure, or
           // "already claimed") is secondary and shouldn't compete with
           // that visually, so it's a compact outlined button instead
-          // of the same full-bleed pill.
+          // of the same full-bleed pill. Both buttons are content-sized
+          // and centered (not edge-to-edge) -- the approved mockup's
+          // overlay is a centered flex column, which hugs its
+          // children's natural width rather than stretching them, and
+          // the button just needs to match that natural size, not a
+          // literal 100%. Explicit rounded-rectangle shape on both --
+          // the app's Material 3 default for Filled/OutlinedButton is
+          // a full stadium pill (used correctly everywhere else, e.g.
+          // Submit/Withdraw Money), but the approved mockup for this
+          // screen specifically used a boxier corner, matching the
+          // 12px radius already established for cards/inputs in
+          // app_theme.dart.
           if (success)
             SizedBox(
-              width: double.infinity,
+              height: 52,
               child: FilledButton(
                 onPressed: onScanAnother,
+                style: FilledButton.styleFrom(
+                  shape: const RoundedRectangleBorder(
+                    borderRadius: BorderRadius.all(Radius.circular(12)),
+                  ),
+                  padding: const EdgeInsets.symmetric(horizontal: 32),
+                  textStyle: const TextStyle(
+                    fontSize: 16,
+                    fontWeight: FontWeight.w700,
+                  ),
+                ),
                 child: const Text('Scan Another'),
               ),
             )
           else
-            OutlinedButton(
-              onPressed: onScanAnother,
-              style: OutlinedButton.styleFrom(
-                foregroundColor: Colors.white,
-                side: const BorderSide(color: Colors.white38),
-                padding: const EdgeInsets.symmetric(
-                  horizontal: AppSpacing.lg,
-                  vertical: 10,
+            SizedBox(
+              height: 48,
+              child: OutlinedButton(
+                onPressed: onScanAnother,
+                style: OutlinedButton.styleFrom(
+                  foregroundColor: Colors.white,
+                  side: const BorderSide(color: Colors.white54, width: 1.5),
+                  shape: const RoundedRectangleBorder(
+                    borderRadius: BorderRadius.all(Radius.circular(12)),
+                  ),
+                  padding: const EdgeInsets.symmetric(horizontal: 28),
+                  textStyle: const TextStyle(
+                    fontSize: 15,
+                    fontWeight: FontWeight.w700,
+                  ),
                 ),
+                child: const Text('Try Again'),
               ),
-              child: const Text('Try Again'),
             ),
         ],
       ),
@@ -139,78 +170,165 @@ class ScanResultSurface extends StatelessWidget {
   }
 }
 
-class _ClaimedByCard extends StatelessWidget {
-  const _ClaimedByCard({required this.name, required this.workshop, this.when});
+/// A plain checkmark/exclamation glyph on a tinted circle -- see this
+/// file's own doc comment for why it's text, not a Material icon.
+class _Badge extends StatelessWidget {
+  const _Badge({required this.glyph, required this.tone});
 
+  final String glyph;
+  final Color tone;
+
+  @override
+  Widget build(BuildContext context) {
+    return CircleAvatar(
+      radius: 44,
+      backgroundColor: tone.withValues(alpha: 0.16),
+      child: Text(
+        glyph,
+        style: TextStyle(
+          color: tone,
+          fontWeight: FontWeight.w800,
+          fontSize: 40,
+          height: 1,
+        ),
+      ),
+    );
+  }
+}
+
+/// Receipt-style card -- deliberately not an avatar/name "profile"
+/// treatment (that read as a celebratory trophy card for what's
+/// actually a block). Modeled on a real transaction/order lookup: a
+/// dashed-off header naming the exact code, label/value rows for who
+/// claimed it and when, and the outcome as its own footer strip. No
+/// photo, no phone number -- see this file's own doc comment.
+class _ClaimedReceiptCard extends StatelessWidget {
+  const _ClaimedReceiptCard({
+    required this.code,
+    required this.name,
+    required this.workshop,
+    this.when,
+  });
+
+  final String? code;
   final String? name;
   final String? workshop;
   final String? when;
 
   @override
   Widget build(BuildContext context) {
-    final displayName = name ?? workshop ?? 'Another mechanic';
-    final initial = displayName.trim().isNotEmpty
-        ? displayName.trim()[0].toUpperCase()
-        : '?';
-
-    return Column(
-      mainAxisSize: MainAxisSize.min,
-      children: [
-        Container(
-          padding: const EdgeInsets.symmetric(vertical: 4),
-          child: const Text(
+    return SizedBox(
+      width: double.infinity,
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.center,
+        children: [
+          const Text(
             'Already claimed',
             style: TextStyle(
+              color: Colors.white,
+              fontWeight: FontWeight.w800,
+              fontSize: 21,
+            ),
+          ),
+          const SizedBox(height: AppSpacing.lg),
+          Container(
+            decoration: BoxDecoration(
+              color: const Color(0xFF151310),
+              border: Border.all(color: Colors.white.withValues(alpha: 0.08)),
+              borderRadius: BorderRadius.circular(16),
+            ),
+            clipBehavior: Clip.antiAlias,
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                if (code != null)
+                  Container(
+                    width: double.infinity,
+                    padding: const EdgeInsets.fromLTRB(16, 14, 16, 14),
+                    decoration: BoxDecoration(
+                      border: Border(
+                        bottom: BorderSide(
+                          color: Colors.white.withValues(alpha: 0.12),
+                        ),
+                      ),
+                    ),
+                    child: Text(
+                      code!,
+                      style: TextStyle(
+                        color: Colors.white.withValues(alpha: 0.55),
+                        fontWeight: FontWeight.w700,
+                        fontSize: 13,
+                        letterSpacing: 0.4,
+                      ),
+                    ),
+                  ),
+                Padding(
+                  padding: const EdgeInsets.symmetric(
+                    horizontal: 16,
+                    vertical: 4,
+                  ),
+                  child: Column(
+                    children: [
+                      if (name != null) _ReceiptRow('Claimed by', name!),
+                      if (workshop != null) _ReceiptRow('Workshop', workshop!),
+                      if (when != null) _ReceiptRow('When', when!),
+                    ],
+                  ),
+                ),
+                Container(
+                  width: double.infinity,
+                  padding: const EdgeInsets.symmetric(vertical: 12),
+                  color: AppColors.warning.withValues(alpha: 0.12),
+                  child: Center(
+                    child: Text(
+                      '✕ Not eligible for reward',
+                      style: TextStyle(
+                        color: AppColors.warning,
+                        fontWeight: FontWeight.w700,
+                        fontSize: 14,
+                      ),
+                    ),
+                  ),
+                ),
+              ],
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+class _ReceiptRow extends StatelessWidget {
+  const _ReceiptRow(this.label, this.value);
+
+  final String label;
+  final String value;
+
+  @override
+  Widget build(BuildContext context) {
+    return Padding(
+      padding: const EdgeInsets.symmetric(vertical: 10),
+      child: Row(
+        mainAxisAlignment: MainAxisAlignment.spaceBetween,
+        children: [
+          Text(
+            label,
+            style: TextStyle(
+              color: Colors.white.withValues(alpha: 0.55),
+              fontSize: 14,
+            ),
+          ),
+          Text(
+            value,
+            style: const TextStyle(
               color: Colors.white,
               fontWeight: FontWeight.w700,
               fontSize: 16,
             ),
           ),
-        ),
-        const SizedBox(height: AppSpacing.md),
-        // A colored-initial avatar, not a raw uploaded photo -- reads
-        // as a real, specific person without needing a Storage policy
-        // that would let any mechanic browse any other mechanic's
-        // profile photo (see this widget's own doc comment).
-        CircleAvatar(
-          radius: 28,
-          backgroundColor: AppColors.warning.withValues(alpha: 0.22),
-          child: Text(
-            initial,
-            style: const TextStyle(
-              color: AppColors.warning,
-              fontWeight: FontWeight.w800,
-              fontSize: 22,
-            ),
-          ),
-        ),
-        const SizedBox(height: AppSpacing.sm),
-        if (name != null)
-          Text(
-            name!,
-            style: const TextStyle(
-              color: Colors.white,
-              fontWeight: FontWeight.w700,
-              fontSize: 15,
-            ),
-          ),
-        if (workshop != null)
-          Padding(
-            padding: const EdgeInsets.only(top: 2),
-            child: Text(
-              workshop!,
-              style: const TextStyle(color: Colors.white70, fontSize: 12.5),
-            ),
-          ),
-        if (when != null)
-          Padding(
-            padding: const EdgeInsets.only(top: 4),
-            child: Text(
-              when!,
-              style: const TextStyle(color: Colors.white54, fontSize: 11),
-            ),
-          ),
-      ],
+        ],
+      ),
     );
   }
 }

@@ -5,6 +5,7 @@ import 'package:go_router/go_router.dart';
 import '../../../../app/theme/app_spacing.dart';
 import '../../../../shared/campaigns/data/active_campaigns_providers.dart';
 import '../../../../shared/models/money_amount.dart';
+import '../../../../shared/notifications/data/notifications_providers.dart';
 import '../../../../shared/widgets/partner_greeting.dart';
 import '../../../../shared/widgets/sgx_cards.dart';
 import '../../../../shared/withdrawals/data/withdrawals_providers.dart';
@@ -24,6 +25,7 @@ class WholesalerHomeScreen extends ConsumerWidget {
     final campaignsAsync = ref.watch(activeCampaignsProvider);
     final withdrawalsAsync = ref.watch(withdrawalsListProvider);
     final minAmountAsync = ref.watch(minWithdrawalAmountProvider);
+    final unreadCount = ref.watch(unreadNotificationsCountProvider).value ?? 0;
 
     // Real running balance -- credited the instant a mechanic scans a
     // QR code tied to one of this wholesaler's invoices (see
@@ -68,10 +70,19 @@ class WholesalerHomeScreen extends ConsumerWidget {
         actions: [
           IconButton(
             tooltip: 'Notifications',
-            onPressed: () => context.push('/notifications'),
-            icon: const Badge(
-              label: Text('3'),
-              child: Icon(Icons.notifications_outlined),
+            // No separate Notifications screen -- every notification
+            // type wired up so far already duplicates a row Activity
+            // shows, so the bell just badges "something happened" and
+            // goes straight to Activity (a tab, hence go() not push()),
+            // marking everything read on the way.
+            onPressed: () {
+              markAllNotificationsRead(ref);
+              context.go('/wholesaler/wallet');
+            },
+            icon: Badge(
+              isLabelVisible: unreadCount > 0,
+              label: Text('$unreadCount'),
+              child: const Icon(Icons.notifications_outlined),
             ),
           ),
         ],

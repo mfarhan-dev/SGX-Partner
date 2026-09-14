@@ -24,10 +24,8 @@ import '../../shared/auth/presentation/phone_login_screen.dart';
 import '../../shared/auth/presentation/splash_screen.dart';
 import '../../shared/campaigns/presentation/campaign_detail_screen.dart';
 import '../../shared/campaigns/presentation/campaigns_screen.dart';
-import '../../shared/notifications/presentation/notifications_screen.dart';
 import '../../shared/products/presentation/product_detail_screen.dart';
 import '../../shared/products/presentation/products_screen.dart';
-import '../../shared/widgets/placeholder_screen.dart';
 import '../shell/sgx_partners_shell.dart';
 
 class AppRoutes {
@@ -147,17 +145,6 @@ class AppRoutes {
           GoRoute(
             path: '/products',
             builder: (_, __) => const ProductsScreen(),
-          ),
-          GoRoute(
-            path: '/notifications',
-            builder: (_, __) => const NotificationsScreen(),
-          ),
-          GoRoute(
-            path: '/profile/preferences',
-            builder: (_, __) => const PlaceholderScreen(
-              title: 'Preferences',
-              description: 'Theme and language preferences placeholder.',
-            ),
           ),
           GoRoute(
             path: '/mechanic/home',

@@ -342,33 +342,36 @@ class _VerifyingOverlay extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Container(
-      color: Colors.black.withValues(alpha: 0.6),
+      // Solid, same as ScanResultSurface -- not translucent, for the
+      // same reason: a lower-alpha scrim here would let the idle
+      // screen's aiming-frame decoration show through underneath it.
+      color: const Color(0xFF0B0B0D),
       alignment: Alignment.center,
       child: const Column(
         mainAxisSize: MainAxisSize.min,
         children: [
           SizedBox(
-            width: 34,
-            height: 34,
+            width: 44,
+            height: 44,
             child: CircularProgressIndicator(
               color: Colors.white,
-              strokeWidth: 3,
+              strokeWidth: 3.5,
             ),
           ),
-          SizedBox(height: 14),
+          SizedBox(height: 20),
           Text(
             'Verifying with SGX…',
             style: TextStyle(
               color: Colors.white,
-              fontWeight: FontWeight.w700,
-              fontSize: 13.5,
+              fontWeight: FontWeight.w800,
+              fontSize: 17,
             ),
           ),
-          SizedBox(height: 4),
+          SizedBox(height: 6),
           Text(
             'This can take a moment on a slow connection.',
             textAlign: TextAlign.center,
-            style: TextStyle(color: Colors.white70, fontSize: 11),
+            style: TextStyle(color: Colors.white70, fontSize: 14),
           ),
         ],
       ),

@@ -4,6 +4,7 @@ import 'package:go_router/go_router.dart';
 
 import '../../core/auth/auth_controller.dart';
 import '../models/app_role.dart';
+import '../notifications/data/notifications_providers.dart';
 import 'sgx_logo.dart';
 
 class SgxAppBar extends ConsumerWidget implements PreferredSizeWidget {
@@ -24,14 +25,31 @@ class SgxAppBar extends ConsumerWidget implements PreferredSizeWidget {
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
+    // No separate Notifications screen -- every notification type
+    // wired up so far already duplicates a row Activity shows, so the
+    // bell just badges "something happened" and takes you straight to
+    // Activity, marking everything read on the way (see
+    // notifications_providers.dart).
+    final unread = ref.watch(unreadNotificationsCountProvider).value ?? 0;
+    final role = ref.watch(authControllerProvider).profile?.role;
+
     final effectiveActions = <Widget>[
       if (showNotifications)
         IconButton(
           tooltip: 'Notifications',
-          onPressed: () => context.push('/notifications'),
+          onPressed: () {
+            markAllNotificationsRead(ref);
+            // Activity is a tab, not a pushed detail screen -- go(),
+            // same as every tab switch in this app, not push().
+            context.go(
+              role == AppRole.wholesaler
+                  ? '/wholesaler/wallet'
+                  : '/mechanic/wallet',
+            );
+          },
           icon: Badge(
-            isLabelVisible: true,
-            label: const Text('3'),
+            isLabelVisible: unread > 0,
+            label: Text('$unread'),
             child: const Icon(Icons.notifications_outlined),
           ),
         ),
@@ -51,7 +69,6 @@ class SgxAppBar extends ConsumerWidget implements PreferredSizeWidget {
                 // fallback has to know who's actually signed in rather
                 // than always landing a wholesaler on the mechanic
                 // home screen.
-                final role = ref.read(authControllerProvider).profile?.role;
                 context.go(
                   role == AppRole.wholesaler
                       ? '/wholesaler/home'
