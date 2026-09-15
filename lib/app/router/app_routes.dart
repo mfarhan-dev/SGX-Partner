@@ -5,7 +5,6 @@ import '../../roles/mechanic/onboarding/presentation/complete_mechanic_profile_s
 import '../../roles/mechanic/profile/presentation/edit_mechanic_profile_screen.dart';
 import '../../roles/mechanic/profile/presentation/mechanic_payout_method_screen.dart';
 import '../../roles/mechanic/profile/presentation/mechanic_profile_screen.dart';
-import '../../roles/mechanic/scan_history/presentation/scan_history_screen.dart';
 import '../../roles/mechanic/scanner/presentation/qr_scanner_screen.dart';
 import '../../roles/mechanic/wallet/presentation/mechanic_wallet_screen.dart';
 import '../../roles/mechanic/withdrawals/presentation/mechanic_withdrawal_detail_screen.dart';
@@ -149,10 +148,6 @@ class AppRoutes {
           GoRoute(
             path: '/mechanic/home',
             builder: (_, __) => const MechanicHomeScreen(),
-          ),
-          GoRoute(
-            path: '/mechanic/scans',
-            builder: (_, __) => const ScanHistoryScreen(),
           ),
           GoRoute(
             path: '/mechanic/wallet',

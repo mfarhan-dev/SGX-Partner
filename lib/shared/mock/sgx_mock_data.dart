@@ -42,22 +42,6 @@ class MockQrProgress {
   double get progress => total == 0 ? 0 : scanned / total;
 }
 
-class MockScan {
-  const MockScan({
-    required this.productName,
-    required this.time,
-    required this.shopName,
-    required this.reward,
-    required this.icon,
-  });
-
-  final String productName;
-  final String time;
-  final String shopName;
-  final MoneyAmount reward;
-  final IconData icon;
-}
-
 const mockWithdrawals = [
   MockWithdrawal(
     id: 'wd-001',
@@ -108,30 +92,6 @@ const mockQrProgress = [
     scanned: 242,
     total: 400,
     earned: MoneyAmount(cents: 290400),
-    icon: Icons.link_outlined,
-  ),
-];
-
-const mockScans = [
-  MockScan(
-    productName: 'Shell Advance AX7 10W-40',
-    time: 'Today · 10:24 AM',
-    shopName: 'Farhan Motor Parts',
-    reward: MoneyAmount(cents: 1500),
-    icon: Icons.oil_barrel_outlined,
-  ),
-  MockScan(
-    productName: 'NGK Spark Plug CR7HSA',
-    time: 'Today · 9:10 AM',
-    shopName: 'Bilal Auto Store',
-    reward: MoneyAmount(cents: 800),
-    icon: Icons.bolt_outlined,
-  ),
-  MockScan(
-    productName: 'DID Chain Kit 428H',
-    time: 'Yesterday · 6:42 PM',
-    shopName: 'Shah Motors',
-    reward: MoneyAmount(cents: 2000),
     icon: Icons.link_outlined,
   ),
 ];

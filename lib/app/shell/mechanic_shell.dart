@@ -85,8 +85,7 @@ class _MechanicNavItem extends StatelessWidget {
   bool _isSelected(String path) {
     if (path == route || path.startsWith('$route/')) return true;
     if (route == '/mechanic/wallet') {
-      return path.startsWith('/mechanic/withdrawals') ||
-          path.startsWith('/mechanic/scans');
+      return path.startsWith('/mechanic/withdrawals');
     }
     if (route == '/products') return path.startsWith('/products');
     return false;
