@@ -18,6 +18,21 @@ final mechanicWalletActivityProvider =
       return [for (final row in rows) _fromRow(row as Map<String, dynamic>)];
     });
 
+/// Real, never-decreasing lifetime-earned total (Rs.) -- summed
+/// server-side by get_mechanic_wallet_summary() from every confirmed
+/// QR-scan reward, unlike `points_balance` which is reduced the moment
+/// a withdrawal is requested. Home only needs this one field from that
+/// RPC's row; `available`/`pending` there already come from
+/// mechanicProfileDataProvider/withdrawalsListProvider.
+final mechanicLifetimeEarnedProvider = FutureProvider<int>((ref) async {
+  ref.watch(authControllerProvider);
+  final client = Supabase.instance.client;
+
+  final rows = await client.rpc('get_mechanic_wallet_summary') as List<dynamic>;
+  final row = rows.single as Map<String, dynamic>;
+  return row['lifetime_earned'] as int;
+});
+
 WalletActivityEntry _fromRow(Map<String, dynamic> row) {
   return WalletActivityEntry(
     id: row['id'] as String,

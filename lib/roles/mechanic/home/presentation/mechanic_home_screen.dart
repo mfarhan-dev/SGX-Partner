@@ -11,6 +11,7 @@ import '../../../../shared/widgets/sgx_cards.dart';
 import '../../../../shared/withdrawals/data/withdrawals_providers.dart';
 import '../../../../shared/withdrawals/presentation/widgets/withdrawal_activity_card.dart';
 import '../../profile/data/mechanic_profile_providers.dart';
+import '../../wallet/data/mechanic_wallet_providers.dart';
 import '../../withdrawals/presentation/mechanic_withdraw_money_screen.dart';
 
 class MechanicHomeScreen extends ConsumerWidget {
@@ -26,6 +27,7 @@ class MechanicHomeScreen extends ConsumerWidget {
     final withdrawalsAsync = ref.watch(withdrawalsListProvider);
     final minAmountAsync = ref.watch(minWithdrawalAmountProvider);
     final unreadCount = ref.watch(unreadNotificationsCountProvider).value ?? 0;
+    final lifetimeEarnedAsync = ref.watch(mechanicLifetimeEarnedProvider);
 
     // Real running balance -- credited the instant a QR code is scanned
     // (see scan_qr_code()/credit_points_on_qr_scan on the database
@@ -37,14 +39,20 @@ class MechanicHomeScreen extends ConsumerWidget {
     // "Pending" is real now: the sum of withdrawals already deducted
     // from points_balance (request_withdrawal() deducts immediately)
     // but not yet finalized -- i.e. every non-terminal status.
-    // `lifetime` still equals `available` -- points_balance has no
-    // separate never-decreasing counter yet, see the field's own doc
-    // comment on MechanicProfileData.
     final withdrawals = withdrawalsAsync.value ?? const [];
     final pendingCents = withdrawals
         .where((w) => !w.status.isTerminal)
         .fold<int>(0, (sum, w) => sum + w.amount.cents);
     final pending = MoneyAmount(cents: pendingCents);
+
+    // Real, never-decreasing lifetime total from
+    // get_mechanic_wallet_summary() -- falls back to `available` only
+    // while the RPC is still loading/erroring, so the card never shows
+    // a blank or a lifetime total lower than what's actually available.
+    final lifetime = lifetimeEarnedAsync.maybeWhen(
+      data: (rupees) => MoneyAmount(cents: rupees * 100),
+      orElse: () => available,
+    );
 
     // The single most recent non-terminal withdrawal, if any -- shown
     // as Home's status banner. Nothing renders here until this partner
@@ -93,7 +101,7 @@ class MechanicHomeScreen extends ConsumerWidget {
             WalletHeroCard(
               available: available,
               pending: pending,
-              lifetime: available,
+              lifetime: lifetime,
               compact: true,
               minWithdrawalAmount: minAmountAsync.value,
               onWithdraw: () => showMechanicWithdrawMoneySheet(context, ref),
