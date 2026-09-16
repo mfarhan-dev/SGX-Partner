@@ -5,6 +5,7 @@ import 'package:url_launcher/url_launcher.dart';
 
 import '../../../../app/theme/app_colors.dart';
 import '../../../../app/theme/app_spacing.dart';
+import '../../../../app/theme/theme_controller.dart';
 import '../../../../core/auth/auth_controller.dart';
 import '../../../../shared/widgets/confirm_dialog.dart';
 import '../../../../shared/widgets/partner_avatar.dart';
@@ -35,39 +36,27 @@ class MechanicProfileScreen extends ConsumerStatefulWidget {
 }
 
 class _MechanicProfileScreenState extends ConsumerState<MechanicProfileScreen> {
-  // Display-only for now -- picking a value here doesn't change the
-  // app's actual locale or theme yet, per instruction: "at the time we
-  // are not going to apply, we have to just show." Defaults match what
-  // the app already ships with: English, Light.
-  String _language = 'English';
-  String _themeLabel = 'Light';
-
-  Future<void> _pickLanguage() async {
-    final picked = await showSingleChoiceDialog<String>(
-      context: context,
-      title: 'Language',
-      selected: _language,
-      options: const [
-        SingleChoiceOption('English', 'English'),
-        SingleChoiceOption('Urdu', 'اردو (Urdu)'),
-      ],
-    );
-    if (picked != null) setState(() => _language = picked);
-  }
-
-  Future<void> _pickTheme() async {
-    final picked = await showSingleChoiceDialog<String>(
+  Future<void> _pickTheme(ThemeMode current) async {
+    final picked = await showSingleChoiceDialog<ThemeMode>(
       context: context,
       title: 'Theme',
-      selected: _themeLabel,
+      selected: current,
       options: const [
-        SingleChoiceOption('Light', 'Light'),
-        SingleChoiceOption('Dark', 'Dark'),
-        SingleChoiceOption('System default', 'System default'),
+        SingleChoiceOption(ThemeMode.light, 'Light'),
+        SingleChoiceOption(ThemeMode.dark, 'Dark'),
+        SingleChoiceOption(ThemeMode.system, 'System default'),
       ],
     );
-    if (picked != null) setState(() => _themeLabel = picked);
+    if (picked != null) {
+      ref.read(themeModeProvider.notifier).setThemeMode(picked);
+    }
   }
+
+  String _themeLabel(ThemeMode mode) => switch (mode) {
+    ThemeMode.light => 'Light',
+    ThemeMode.dark => 'Dark',
+    ThemeMode.system => 'System default',
+  };
 
   Future<void> _contactSgx(String? whatsappNumber) async {
     if (whatsappNumber == null || whatsappNumber.isEmpty) return;
@@ -115,6 +104,7 @@ class _MechanicProfileScreenState extends ConsumerState<MechanicProfileScreen> {
   Widget build(BuildContext context) {
     final profileAsync = ref.watch(mechanicProfileDataProvider);
     final accountsAsync = ref.watch(payoutAccountsProvider);
+    final themeMode = ref.watch(themeModeProvider);
 
     return SgxScreen(
       title: 'Settings',
@@ -125,9 +115,10 @@ class _MechanicProfileScreenState extends ConsumerState<MechanicProfileScreen> {
       // keeps rendering `data` with the old value instead of flashing
       // the skeleton over already-good content.
       children: profileAsync.when(
-        data: (profile) => _content(profile, accountsAsync.value),
+        data: (profile) => _content(profile, accountsAsync.value, themeMode),
         loading: () => const [SettingsScreenSkeleton()],
-        error: (error, stackTrace) => _content(null, accountsAsync.value),
+        error: (error, stackTrace) =>
+            _content(null, accountsAsync.value, themeMode),
       ),
     );
   }
@@ -135,6 +126,7 @@ class _MechanicProfileScreenState extends ConsumerState<MechanicProfileScreen> {
   List<Widget> _content(
     MechanicProfileData? profile,
     List<PayoutAccount>? accounts,
+    ThemeMode themeMode,
   ) {
     return [
       if (profile != null)
@@ -204,19 +196,11 @@ class _MechanicProfileScreenState extends ConsumerState<MechanicProfileScreen> {
       _SettingsCard(
         children: [
           ListTile(
-            leading: const Icon(Icons.language),
-            title: const Text('Language'),
-            subtitle: Text(_language),
-            trailing: const Icon(Icons.chevron_right),
-            onTap: _pickLanguage,
-          ),
-          const Divider(height: 1),
-          ListTile(
             leading: const Icon(Icons.dark_mode_outlined),
             title: const Text('Theme'),
-            subtitle: Text(_themeLabel),
+            subtitle: Text(_themeLabel(themeMode)),
             trailing: const Icon(Icons.chevron_right),
-            onTap: _pickTheme,
+            onTap: () => _pickTheme(themeMode),
           ),
           const Divider(height: 1),
           ListTile(
