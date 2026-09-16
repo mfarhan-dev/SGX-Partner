@@ -37,3 +37,21 @@ KhataEntry _fromRow(Map<String, dynamic> row) {
     balanceAfter: (row['balance_after'] as num).toDouble(),
   );
 }
+
+/// Real, never-decreasing lifetime-earned total (Rs.) -- summed
+/// server-side by get_wholesaler_wallet_summary() from every confirmed
+/// QR-scan reward on this wholesaler's own dispatched invoices, unlike
+/// `points_balance` which is reduced the moment a withdrawal is
+/// requested. Home only needs this one field from that RPC's row;
+/// `available`/`pending` there already come from
+/// wholesalerProfileDataProvider/withdrawalsListProvider. Mirrors
+/// mechanicLifetimeEarnedProvider exactly.
+final wholesalerLifetimeEarnedProvider = FutureProvider<int>((ref) async {
+  ref.watch(authControllerProvider);
+  final client = Supabase.instance.client;
+
+  final rows =
+      await client.rpc('get_wholesaler_wallet_summary') as List<dynamic>;
+  final row = rows.single as Map<String, dynamic>;
+  return row['lifetime_earned'] as int;
+});
