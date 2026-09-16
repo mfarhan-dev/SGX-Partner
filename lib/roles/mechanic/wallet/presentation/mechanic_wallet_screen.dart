@@ -8,6 +8,7 @@ import '../../../../app/theme/app_spacing.dart';
 import '../../../../shared/widgets/sgx_app_bar.dart';
 import '../data/mechanic_wallet_providers.dart';
 import '../domain/wallet_activity_entry.dart';
+import 'widgets/wallet_activity_skeleton.dart';
 
 enum _WalletFilter { all, rewards, withdrawals }
 
@@ -62,10 +63,7 @@ class _MechanicWalletScreenState extends ConsumerState<MechanicWalletScreen> {
               const SizedBox(height: AppSpacing.sm),
               activityAsync.when(
                 data: (entries) => _activityList(context, entries),
-                loading: () => const Padding(
-                  padding: EdgeInsets.only(top: AppSpacing.xl),
-                  child: Center(child: CircularProgressIndicator()),
-                ),
+                loading: () => const WalletActivitySkeleton(),
                 error: (error, stackTrace) => Padding(
                   padding: const EdgeInsets.only(top: AppSpacing.xl),
                   child: Center(

@@ -6,6 +6,7 @@ import '../../../app/theme/app_spacing.dart';
 import '../data/active_campaigns_providers.dart';
 import '../../widgets/sgx_cards.dart';
 import '../../widgets/sgx_screen.dart';
+import 'widgets/campaigns_list_skeleton.dart';
 
 class CampaignsScreen extends ConsumerWidget {
   const CampaignsScreen({super.key});
@@ -21,7 +22,7 @@ class CampaignsScreen extends ConsumerWidget {
         Container(
           padding: const EdgeInsets.all(AppSpacing.md),
           decoration: BoxDecoration(
-            color: AppColors.surfaceContainer,
+            color: AppColors.surfaceContainerOf(context),
             borderRadius: BorderRadius.circular(14),
           ),
           child: const Row(
@@ -35,12 +36,12 @@ class CampaignsScreen extends ConsumerWidget {
         const SizedBox(height: AppSpacing.md),
         campaignsAsync.when(
           data: (campaigns) => campaigns.isEmpty
-              ? const Padding(
-                  padding: EdgeInsets.symmetric(vertical: 32),
+              ? Padding(
+                  padding: const EdgeInsets.symmetric(vertical: 32),
                   child: Center(
                     child: Text(
                       'No active campaigns right now.',
-                      style: TextStyle(color: AppColors.mutedText),
+                      style: TextStyle(color: AppColors.mutedTextOf(context)),
                     ),
                   ),
                 )
@@ -53,16 +54,13 @@ class CampaignsScreen extends ConsumerWidget {
                       ),
                   ],
                 ),
-          loading: () => const Padding(
-            padding: EdgeInsets.symmetric(vertical: 32),
-            child: Center(child: CircularProgressIndicator()),
-          ),
-          error: (error, stackTrace) => const Padding(
-            padding: EdgeInsets.symmetric(vertical: 32),
+          loading: () => const CampaignsListSkeleton(),
+          error: (error, stackTrace) => Padding(
+            padding: const EdgeInsets.symmetric(vertical: 32),
             child: Center(
               child: Text(
                 'Could not load campaigns. Pull to refresh or try again later.',
-                style: TextStyle(color: AppColors.mutedText),
+                style: TextStyle(color: AppColors.mutedTextOf(context)),
               ),
             ),
           ),

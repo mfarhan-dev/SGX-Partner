@@ -103,6 +103,7 @@ class WholesalerHomeScreen extends ConsumerWidget {
               available: available,
               pending: pending,
               lifetime: lifetime,
+              loading: profileAsync.isLoading,
               minWithdrawalAmount: minAmountAsync.value,
               onWithdraw: () => showWholesalerWithdrawMoneySheet(context, ref),
               compact: true,

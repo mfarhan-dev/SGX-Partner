@@ -20,12 +20,21 @@ class WalletHeroCard extends StatelessWidget {
     required this.onWithdraw,
     this.minWithdrawalAmount,
     this.compact = false,
+    this.loading = false,
   });
 
   final MoneyAmount available;
   final MoneyAmount pending;
   final MoneyAmount lifetime;
   final VoidCallback onWithdraw;
+
+  /// True while the real balance hasn't loaded yet -- swaps the amount
+  /// texts for glass-tinted skeleton boxes instead of showing "Rs. 0"
+  /// (which reads as a real, alarming zero balance rather than "still
+  /// loading"). The branded card shell itself (gradient, icons, static
+  /// labels, the button) stays fully real throughout, since none of
+  /// that is actually loading -- only the three numbers are.
+  final bool loading;
 
   /// Rs. minimum from app_settings, via minWithdrawalAmountProvider --
   /// shown as a quiet, always-visible caption under the button, never
@@ -93,16 +102,18 @@ class WalletHeroCard extends StatelessWidget {
                 ],
               ),
               const SizedBox(height: AppSpacing.sm),
-              Text(
-                MoneyFormatter.format(available),
-                style: TextStyle(
-                  color: Colors.white,
-                  fontSize: compact ? 38 : 44,
-                  height: 1.05,
-                  fontWeight: FontWeight.w800,
-                  letterSpacing: -1,
-                ),
-              ),
+              loading
+                  ? _WhiteSkeletonBox(width: 150, height: compact ? 38 : 44)
+                  : Text(
+                      MoneyFormatter.format(available),
+                      style: TextStyle(
+                        color: Colors.white,
+                        fontSize: compact ? 38 : 44,
+                        height: 1.05,
+                        fontWeight: FontWeight.w800,
+                        letterSpacing: -1,
+                      ),
+                    ),
               const SizedBox(height: AppSpacing.md),
               Row(
                 children: [
@@ -110,6 +121,7 @@ class WalletHeroCard extends StatelessWidget {
                     child: _GlassValue(
                       label: 'PENDING',
                       value: MoneyFormatter.format(pending),
+                      loading: loading,
                     ),
                   ),
                   const SizedBox(width: AppSpacing.sm),
@@ -117,6 +129,7 @@ class WalletHeroCard extends StatelessWidget {
                     child: _GlassValue(
                       label: 'LIFETIME',
                       value: MoneyFormatter.format(lifetime),
+                      loading: loading,
                     ),
                   ),
                 ],
@@ -156,10 +169,15 @@ class WalletHeroCard extends StatelessWidget {
 }
 
 class _GlassValue extends StatelessWidget {
-  const _GlassValue({required this.label, required this.value});
+  const _GlassValue({
+    required this.label,
+    required this.value,
+    this.loading = false,
+  });
 
   final String label;
   final String value;
+  final bool loading;
 
   @override
   Widget build(BuildContext context) {
@@ -182,17 +200,45 @@ class _GlassValue extends StatelessWidget {
             ),
           ),
           const SizedBox(height: 2),
-          Text(
-            value,
-            maxLines: 1,
-            overflow: TextOverflow.ellipsis,
-            style: const TextStyle(
-              color: Colors.white,
-              fontSize: 15,
-              fontWeight: FontWeight.w800,
-            ),
-          ),
+          loading
+              ? const _WhiteSkeletonBox(width: 60, height: 15)
+              : Text(
+                  value,
+                  maxLines: 1,
+                  overflow: TextOverflow.ellipsis,
+                  style: const TextStyle(
+                    color: Colors.white,
+                    fontSize: 15,
+                    fontWeight: FontWeight.w800,
+                  ),
+                ),
         ],
+      ),
+    );
+  }
+}
+
+/// A static, glass-tinted white box standing in for a number that
+/// hasn't loaded yet -- used only against WalletHeroCard's own colored
+/// gradient, where the shared grey SkeletonBox (tuned for a plain
+/// surface) would look wrong. Unanimated by design: this card's own
+/// numbers resolve almost immediately (session-cached provider), so a
+/// brief static placeholder reads cleaner than adding motion for a
+/// fraction of a second.
+class _WhiteSkeletonBox extends StatelessWidget {
+  const _WhiteSkeletonBox({required this.width, required this.height});
+
+  final double width;
+  final double height;
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      width: width,
+      height: height,
+      decoration: BoxDecoration(
+        color: Colors.white.withValues(alpha: 0.25),
+        borderRadius: BorderRadius.circular(6),
       ),
     );
   }
@@ -480,7 +526,9 @@ class _CampaignCarouselState extends State<CampaignCarousel> {
                 width: i == _page ? 16 : 6,
                 height: 6,
                 decoration: BoxDecoration(
-                  color: i == _page ? AppColors.primary : AppColors.outline,
+                  color: i == _page
+                      ? AppColors.primary
+                      : AppColors.outlineOf(context),
                   borderRadius: BorderRadius.circular(3),
                 ),
               ),

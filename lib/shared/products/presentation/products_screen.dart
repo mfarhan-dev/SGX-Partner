@@ -5,6 +5,7 @@ import '../../../app/theme/app_colors.dart';
 import '../data/catalog_products_providers.dart';
 import '../domain/catalog_product.dart';
 import '../../widgets/sgx_cards.dart';
+import 'widgets/products_grid_skeleton.dart';
 
 /// Real catalog grid -- fetched once per session via
 /// catalogProductsProvider, filtered client-side by search text and
@@ -56,7 +57,7 @@ class _ProductsScreenState extends ConsumerState<ProductsScreen> {
       body: SafeArea(
         child: productsAsync.when(
           data: (products) => _buildGrid(context, products),
-          loading: () => const Center(child: CircularProgressIndicator()),
+          loading: () => const ProductsGridSkeleton(),
           error: (error, stackTrace) => Center(
             child: Padding(
               padding: const EdgeInsets.all(24),

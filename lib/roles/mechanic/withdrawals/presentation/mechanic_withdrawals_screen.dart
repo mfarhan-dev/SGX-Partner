@@ -6,6 +6,7 @@ import '../../../../app/theme/app_spacing.dart';
 import '../../../../shared/widgets/sgx_cards.dart';
 import '../../../../shared/widgets/sgx_screen.dart';
 import '../../../../shared/withdrawals/data/withdrawals_providers.dart';
+import '../../../../shared/withdrawals/presentation/widgets/withdrawals_list_skeleton.dart';
 
 enum _Filter { all, open, completed }
 
@@ -92,10 +93,7 @@ class _MechanicWithdrawalsScreenState
               ],
             );
           },
-          loading: () => const Padding(
-            padding: EdgeInsets.symmetric(vertical: 64),
-            child: Center(child: CircularProgressIndicator()),
-          ),
+          loading: () => const WithdrawalsListSkeleton(),
           error: (error, stackTrace) => Padding(
             padding: const EdgeInsets.symmetric(vertical: 64),
             child: Center(

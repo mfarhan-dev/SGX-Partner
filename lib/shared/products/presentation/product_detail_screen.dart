@@ -9,6 +9,7 @@ import '../../../core/auth/auth_controller.dart';
 import '../../models/app_role.dart';
 import '../data/catalog_products_providers.dart';
 import '../domain/catalog_product.dart';
+import 'widgets/product_detail_skeleton.dart';
 
 /// Real product detail via get_catalog_product() -- no price anywhere,
 /// per instruction. Same treatment as CampaignDetailScreen (approved
@@ -63,10 +64,7 @@ class ProductDetailScreen extends ConsumerWidget {
                   data: (product) => product == null
                       ? const _ProductNotFound()
                       : _ProductDetailBody(product: product),
-                  loading: () => Padding(
-                    padding: EdgeInsets.only(top: topInset + 140),
-                    child: const Center(child: CircularProgressIndicator()),
-                  ),
+                  loading: () => const ProductDetailSkeleton(),
                   error: (error, stackTrace) => const _ProductNotFound(),
                 ),
                 Positioned(

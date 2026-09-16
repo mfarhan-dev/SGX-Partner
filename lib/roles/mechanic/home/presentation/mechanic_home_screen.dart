@@ -103,6 +103,7 @@ class MechanicHomeScreen extends ConsumerWidget {
               pending: pending,
               lifetime: lifetime,
               compact: true,
+              loading: profileAsync.isLoading,
               minWithdrawalAmount: minAmountAsync.value,
               onWithdraw: () => showMechanicWithdrawMoneySheet(context, ref),
             ),

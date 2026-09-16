@@ -14,6 +14,7 @@ import '../../../../shared/withdrawals/domain/withdrawal_activity_event.dart';
 import '../../../../shared/withdrawals/domain/withdrawal_dispute_event.dart';
 import '../../../../shared/withdrawals/domain/withdrawal_payment_event.dart';
 import '../../../../shared/withdrawals/domain/withdrawal_status.dart';
+import '../../../../shared/withdrawals/presentation/widgets/withdrawal_detail_skeleton.dart';
 import '../../../../shared/withdrawals/presentation/widgets/withdrawal_status_chip.dart';
 import '../../../../shared/withdrawals/presentation/widgets/withdrawal_timeline_list.dart';
 import '../../profile/data/wholesaler_profile_providers.dart';
@@ -45,10 +46,7 @@ class WholesalerWithdrawalDetailScreen extends ConsumerWidget {
       children: [
         withdrawalAsync.when(
           data: (withdrawal) => _WithdrawalDetailBody(withdrawal: withdrawal),
-          loading: () => const Padding(
-            padding: EdgeInsets.symmetric(vertical: 64),
-            child: Center(child: CircularProgressIndicator()),
-          ),
+          loading: () => const WithdrawalDetailSkeleton(),
           error: (error, stackTrace) => Padding(
             padding: const EdgeInsets.symmetric(vertical: 64),
             child: Center(

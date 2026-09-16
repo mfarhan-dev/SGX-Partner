@@ -10,6 +10,7 @@ import '../../../core/auth/auth_controller.dart';
 import '../../models/app_role.dart';
 import '../data/active_campaigns_providers.dart';
 import '../domain/active_campaign.dart';
+import 'widgets/campaign_detail_skeleton.dart';
 
 /// Reached from a real CampaignTile tap, so this reads from the same
 /// activeCampaignsProvider list Home already fetched -- no second
@@ -75,10 +76,7 @@ class CampaignDetailScreen extends ConsumerWidget {
                   data: (_) => campaign == null
                       ? const _CampaignNotFound()
                       : _CampaignDetailBody(campaign: campaign),
-                  loading: () => Padding(
-                    padding: EdgeInsets.only(top: topInset + 140),
-                    child: const Center(child: CircularProgressIndicator()),
-                  ),
+                  loading: () => const CampaignDetailSkeleton(),
                   error: (error, stackTrace) => const _CampaignNotFound(),
                 ),
                 Positioned(
