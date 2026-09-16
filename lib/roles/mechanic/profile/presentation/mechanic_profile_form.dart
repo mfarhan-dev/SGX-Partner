@@ -188,20 +188,20 @@ class _MechanicProfileFormState extends State<MechanicProfileForm> {
             color: AppColors.successContainer,
             child: ListTile(
               leading: const Icon(Icons.verified, color: AppColors.success),
-              title: const Text(
+              title: Text(
                 'Verified phone',
                 style: TextStyle(
-                  color: AppColors.text,
+                  color: AppColors.textOf(context),
                   fontWeight: FontWeight.w600,
                 ),
               ),
               subtitle: Text(
                 widget.phoneNumber ?? '—',
-                style: const TextStyle(color: AppColors.mutedText),
+                style: TextStyle(color: AppColors.mutedTextOf(context)),
               ),
-              trailing: const Icon(
+              trailing: Icon(
                 Icons.lock_outline,
-                color: AppColors.mutedText,
+                color: AppColors.mutedTextOf(context),
               ),
             ),
           ),
@@ -265,7 +265,7 @@ class _MechanicProfileFormState extends State<MechanicProfileForm> {
             child: Text(
               _area ?? 'Select area / city',
               style: TextStyle(
-                color: _area == null ? AppColors.mutedText : null,
+                color: _area == null ? AppColors.mutedTextOf(context) : null,
               ),
             ),
           ),
@@ -321,13 +321,13 @@ class _MechanicProfileFormState extends State<MechanicProfileForm> {
         children: [
           CircleAvatar(
             radius: 44,
-            backgroundColor: AppColors.surfaceContainer,
+            backgroundColor: AppColors.surfaceContainerOf(context),
             backgroundImage: backgroundImage,
             child: backgroundImage == null
-                ? const Icon(
+                ? Icon(
                     Icons.person_outline,
                     size: 40,
-                    color: AppColors.mutedText,
+                    color: AppColors.mutedTextOf(context),
                   )
                 : null,
           ),
@@ -358,16 +358,16 @@ class _MechanicProfileFormState extends State<MechanicProfileForm> {
         color: AppColors.successContainer,
         child: ListTile(
           leading: const Icon(Icons.my_location, color: AppColors.success),
-          title: const Text(
+          title: Text(
             'Location captured',
             style: TextStyle(
-              color: AppColors.text,
+              color: AppColors.textOf(context),
               fontWeight: FontWeight.w600,
             ),
           ),
           subtitle: Text(
             '${_latitude!.toStringAsFixed(5)}, ${_longitude!.toStringAsFixed(5)}',
-            style: const TextStyle(color: AppColors.mutedText),
+            style: TextStyle(color: AppColors.mutedTextOf(context)),
           ),
           trailing: TextButton(
             onPressed: _isLocating ? null : _captureLocation,
@@ -399,8 +399,8 @@ class _MechanicProfileFormState extends State<MechanicProfileForm> {
                   ? 'Location is turned off on this phone.'
                   : 'Location is turned off for this app.',
               textAlign: TextAlign.center,
-              style: const TextStyle(
-                color: AppColors.text,
+              style: TextStyle(
+                color: AppColors.textOf(context),
                 fontWeight: FontWeight.w700,
                 fontSize: 15,
               ),

@@ -128,17 +128,17 @@ class _OtpVerificationScreenState extends ConsumerState<OtpVerificationScreen> {
                 children: [
                   TextSpan(
                     text: _maskedPhone(auth.phoneNumber),
-                    style: const TextStyle(
-                      color: AppColors.text,
+                    style: TextStyle(
+                      color: AppColors.textOf(context),
                       fontWeight: FontWeight.w700,
                     ),
                   ),
                 ],
               ),
               textAlign: TextAlign.center,
-              style: Theme.of(
-                context,
-              ).textTheme.bodyMedium?.copyWith(color: AppColors.mutedText),
+              style: Theme.of(context).textTheme.bodyMedium?.copyWith(
+                color: AppColors.mutedTextOf(context),
+              ),
             ),
             const SizedBox(height: 36),
             GestureDetector(
@@ -169,7 +169,7 @@ class _OtpVerificationScreenState extends ConsumerState<OtpVerificationScreen> {
                           border: Border.all(
                             color: active
                                 ? AppColors.primary
-                                : AppColors.outline,
+                                : AppColors.outlineOf(context),
                             width: 2,
                           ),
                         ),
@@ -179,7 +179,7 @@ class _OtpVerificationScreenState extends ConsumerState<OtpVerificationScreen> {
                           style: TextStyle(
                             color: value.isNotEmpty
                                 ? AppColors.primary
-                                : AppColors.text,
+                                : AppColors.textOf(context),
                             fontSize: 24,
                             fontWeight: FontWeight.w800,
                           ),
@@ -216,9 +216,9 @@ class _OtpVerificationScreenState extends ConsumerState<OtpVerificationScreen> {
               Text(
                 'Resend code in 00:${_secondsRemaining.toString().padLeft(2, '0')}',
                 textAlign: TextAlign.center,
-                style: Theme.of(
-                  context,
-                ).textTheme.bodyMedium?.copyWith(color: AppColors.mutedText),
+                style: Theme.of(context).textTheme.bodyMedium?.copyWith(
+                  color: AppColors.mutedTextOf(context),
+                ),
               )
             else
               Center(

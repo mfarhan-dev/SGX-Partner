@@ -62,8 +62,7 @@ class _SearchableListSheetState extends State<_SearchableListSheet> {
 
   @override
   Widget build(BuildContext context) {
-    final isDark = Theme.of(context).brightness == Brightness.dark;
-    final sheetColor = isDark ? AppColors.darkSurface : AppColors.surface;
+    final sheetColor = AppColors.surfaceOf(context);
 
     return FractionallySizedBox(
       heightFactor: 0.9,
@@ -81,7 +80,7 @@ class _SearchableListSheetState extends State<_SearchableListSheet> {
                 width: 40,
                 height: 4,
                 decoration: BoxDecoration(
-                  color: AppColors.outline,
+                  color: AppColors.outlineOf(context),
                   borderRadius: BorderRadius.circular(2),
                 ),
               ),
@@ -127,7 +126,7 @@ class _SearchableListSheetState extends State<_SearchableListSheet> {
                         child: Text(
                           'No matches',
                           style: Theme.of(context).textTheme.bodyMedium
-                              ?.copyWith(color: AppColors.mutedText),
+                              ?.copyWith(color: AppColors.mutedTextOf(context)),
                         ),
                       )
                     : ListView.separated(

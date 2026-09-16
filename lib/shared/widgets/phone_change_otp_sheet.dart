@@ -52,8 +52,7 @@ class _PhoneChangeOtpSheetState extends State<_PhoneChangeOtpSheet> {
 
   @override
   Widget build(BuildContext context) {
-    final isDark = Theme.of(context).brightness == Brightness.dark;
-    final sheetColor = isDark ? AppColors.darkSurface : AppColors.surface;
+    final sheetColor = AppColors.surfaceOf(context);
 
     return Padding(
       padding: EdgeInsets.only(
@@ -83,7 +82,7 @@ class _PhoneChangeOtpSheetState extends State<_PhoneChangeOtpSheet> {
                     height: 4,
                     margin: const EdgeInsets.only(bottom: AppSpacing.md),
                     decoration: BoxDecoration(
-                      color: AppColors.outline,
+                      color: AppColors.outlineOf(context),
                       borderRadius: BorderRadius.circular(2),
                     ),
                   ),
@@ -99,9 +98,9 @@ class _PhoneChangeOtpSheetState extends State<_PhoneChangeOtpSheet> {
                 Text(
                   'We sent a 6-digit code to ${widget.newPhoneNumber}',
                   textAlign: TextAlign.center,
-                  style: Theme.of(
-                    context,
-                  ).textTheme.bodyMedium?.copyWith(color: AppColors.mutedText),
+                  style: Theme.of(context).textTheme.bodyMedium?.copyWith(
+                    color: AppColors.mutedTextOf(context),
+                  ),
                 ),
                 const SizedBox(height: AppSpacing.lg),
                 TextField(

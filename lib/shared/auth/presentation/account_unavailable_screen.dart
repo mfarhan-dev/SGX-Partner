@@ -43,9 +43,9 @@ class AccountUnavailableScreen extends StatelessWidget {
         Text(
           'Your SGX Partners account is currently inactive. Please contact SGX to reactivate it.',
           textAlign: TextAlign.center,
-          style: Theme.of(
-            context,
-          ).textTheme.bodyMedium?.copyWith(color: AppColors.mutedText),
+          style: Theme.of(context).textTheme.bodyMedium?.copyWith(
+            color: AppColors.mutedTextOf(context),
+          ),
         ),
         const SizedBox(height: AppSpacing.xl),
         FilledButton.icon(

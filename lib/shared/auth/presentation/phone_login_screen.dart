@@ -95,9 +95,9 @@ class _PhoneLoginScreenState extends ConsumerState<PhoneLoginScreen> {
         Text(
           'Enter your mobile number to continue.',
           textAlign: TextAlign.center,
-          style: Theme.of(
-            context,
-          ).textTheme.bodyMedium?.copyWith(color: AppColors.mutedText),
+          style: Theme.of(context).textTheme.bodyMedium?.copyWith(
+            color: AppColors.mutedTextOf(context),
+          ),
         ),
         const SizedBox(height: 40),
         TextField(
@@ -137,9 +137,9 @@ class _PhoneLoginScreenState extends ConsumerState<PhoneLoginScreen> {
         Text(
           'An SMS with a 6-digit code will be sent.\nStandard SMS charges may apply.',
           textAlign: TextAlign.center,
-          style: Theme.of(
-            context,
-          ).textTheme.bodySmall?.copyWith(color: AppColors.mutedText),
+          style: Theme.of(context).textTheme.bodySmall?.copyWith(
+            color: AppColors.mutedTextOf(context),
+          ),
         ),
         const Spacer(),
         Container(
@@ -181,14 +181,21 @@ class _PhoneLoginScreenState extends ConsumerState<PhoneLoginScreen> {
           ),
         ),
         const SizedBox(height: AppSpacing.lg),
-        const Row(
+        Row(
           mainAxisAlignment: MainAxisAlignment.center,
           children: [
-            Icon(Icons.shield_outlined, size: 16, color: AppColors.mutedText),
-            SizedBox(width: 6),
+            Icon(
+              Icons.shield_outlined,
+              size: 16,
+              color: AppColors.mutedTextOf(context),
+            ),
+            const SizedBox(width: 6),
             Text(
               'Secure login by SGX',
-              style: TextStyle(color: AppColors.mutedText, fontSize: 12),
+              style: TextStyle(
+                color: AppColors.mutedTextOf(context),
+                fontSize: 12,
+              ),
             ),
           ],
         ),

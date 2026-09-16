@@ -159,20 +159,20 @@ class _WholesalerProfileFormState extends State<WholesalerProfileForm> {
             color: AppColors.successContainer,
             child: ListTile(
               leading: const Icon(Icons.verified, color: AppColors.success),
-              title: const Text(
+              title: Text(
                 'Verified phone',
                 style: TextStyle(
-                  color: AppColors.text,
+                  color: AppColors.textOf(context),
                   fontWeight: FontWeight.w600,
                 ),
               ),
               subtitle: Text(
                 widget.phoneNumber ?? '—',
-                style: const TextStyle(color: AppColors.mutedText),
+                style: TextStyle(color: AppColors.mutedTextOf(context)),
               ),
-              trailing: const Icon(
+              trailing: Icon(
                 Icons.lock_outline,
-                color: AppColors.mutedText,
+                color: AppColors.mutedTextOf(context),
               ),
             ),
           ),
@@ -236,7 +236,7 @@ class _WholesalerProfileFormState extends State<WholesalerProfileForm> {
             child: Text(
               _area ?? 'Select area / city',
               style: TextStyle(
-                color: _area == null ? AppColors.mutedText : null,
+                color: _area == null ? AppColors.mutedTextOf(context) : null,
               ),
             ),
           ),
@@ -290,13 +290,13 @@ class _WholesalerProfileFormState extends State<WholesalerProfileForm> {
         children: [
           CircleAvatar(
             radius: 44,
-            backgroundColor: AppColors.surfaceContainer,
+            backgroundColor: AppColors.surfaceContainerOf(context),
             backgroundImage: backgroundImage,
             child: backgroundImage == null
-                ? const Icon(
+                ? Icon(
                     Icons.person_outline,
                     size: 40,
-                    color: AppColors.mutedText,
+                    color: AppColors.mutedTextOf(context),
                   )
                 : null,
           ),
