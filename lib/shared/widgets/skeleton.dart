@@ -48,7 +48,7 @@ class _SkeletonBoxState extends State<SkeletonBox>
         width: widget.width,
         height: widget.height,
         decoration: BoxDecoration(
-          color: AppColors.outline,
+          color: AppColors.outlineOf(context),
           borderRadius: BorderRadius.circular(widget.radius),
         ),
       ),

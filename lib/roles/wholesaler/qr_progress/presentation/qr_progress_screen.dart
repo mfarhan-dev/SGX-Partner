@@ -7,6 +7,7 @@ import '../../../../shared/widgets/sgx_app_bar.dart';
 import '../data/wholesaler_qr_progress_providers.dart';
 import '../domain/qr_progress_models.dart';
 import 'widgets/qr_progress_card.dart';
+import 'widgets/qr_progress_screen_skeleton.dart';
 
 class QrProgressScreen extends ConsumerWidget {
   const QrProgressScreen({super.key});
@@ -32,7 +33,10 @@ class QrProgressScreen extends ConsumerWidget {
           onRefresh: refresh,
           child: batchesAsync.when(
             data: (batches) => _content(context, batches),
-            loading: () => const Center(child: CircularProgressIndicator()),
+            loading: () => ListView(
+              padding: const EdgeInsets.all(AppSpacing.md),
+              children: const [QrProgressScreenSkeleton()],
+            ),
             error: (error, stackTrace) => ListView(
               physics: const AlwaysScrollableScrollPhysics(),
               padding: const EdgeInsets.symmetric(
