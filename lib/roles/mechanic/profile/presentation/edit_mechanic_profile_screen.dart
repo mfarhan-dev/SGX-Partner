@@ -5,6 +5,7 @@ import 'package:supabase_flutter/supabase_flutter.dart';
 
 import '../../../../core/utils/phone_formatter.dart';
 import '../../../../shared/widgets/phone_change_otp_sheet.dart';
+import '../../../../shared/widgets/profile_form_skeleton.dart';
 import '../../../../shared/widgets/sgx_screen.dart';
 import '../data/mechanic_profile_providers.dart';
 import '../data/mechanic_profile_update_repository.dart';
@@ -62,10 +63,7 @@ class EditMechanicProfileScreen extends ConsumerWidget {
               if (context.mounted) context.go('/mechanic/profile');
             },
           ),
-          loading: () => const Padding(
-            padding: EdgeInsets.symmetric(vertical: 48),
-            child: Center(child: CircularProgressIndicator()),
-          ),
+          loading: () => const ProfileFormSkeleton(),
           error: (error, stackTrace) => const Padding(
             padding: EdgeInsets.symmetric(vertical: 48),
             child: Center(

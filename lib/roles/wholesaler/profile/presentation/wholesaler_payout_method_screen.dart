@@ -10,6 +10,7 @@ import '../../../../shared/withdrawals/domain/payout_account.dart';
 import '../../../../shared/withdrawals/domain/payout_provider.dart';
 import '../../../../shared/withdrawals/presentation/account_details_sheet.dart';
 import '../../../../shared/withdrawals/presentation/payout_provider_logo.dart';
+import '../../../../shared/withdrawals/presentation/widgets/payout_accounts_skeleton.dart';
 
 /// A partner can save several payout accounts (a wallet AND a bank
 /// account, ...) -- see payout_accounts table. Each saved account can
@@ -62,10 +63,7 @@ class WholesalerPayoutMethodScreen extends ConsumerWidget {
                     const SizedBox(height: AppSpacing.md),
                   ],
                 ),
-          loading: () => const Padding(
-            padding: EdgeInsets.symmetric(vertical: AppSpacing.md),
-            child: Center(child: CircularProgressIndicator()),
-          ),
+          loading: () => const PayoutAccountsSkeleton(),
           error: (error, stackTrace) => Text(
             'Could not load your saved accounts.',
             style: TextStyle(color: AppColors.error),
