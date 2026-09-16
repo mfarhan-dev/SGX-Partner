@@ -1,6 +1,7 @@
 import '../domain/payout_account.dart';
 import '../domain/payout_provider.dart';
 import '../domain/withdrawal.dart';
+import '../domain/withdrawal_dispute_event.dart';
 import '../domain/withdrawal_payment_event.dart';
 
 abstract interface class WithdrawalsRepository {
@@ -37,6 +38,17 @@ abstract interface class WithdrawalsRepository {
   /// happened. Backed by get_withdrawal_payment_events(), a
   /// partner-scoped read into `audit_logs` (otherwise staff-only).
   Future<List<WithdrawalPaymentEvent>> getPaymentEvents(String withdrawalId);
+
+  /// Every time this partner disputed [withdrawalId], oldest first --
+  /// one row normally, more than one only when a re-paid withdrawal got
+  /// disputed again. The `withdrawals` row itself only keeps the latest
+  /// dispute's reason/timestamp (a second dispute overwrites both), so
+  /// this is the only place to see an earlier dispute's own reason once
+  /// it's happened more than once. Backed by
+  /// get_withdrawal_dispute_events(), a partner-scoped read into
+  /// `audit_logs` (otherwise staff-only) -- mirrors [getPaymentEvents]
+  /// exactly.
+  Future<List<WithdrawalDisputeEvent>> getDisputeEvents(String withdrawalId);
 
   /// Rs. minimum a partner is allowed to request in one withdrawal --
   /// from app_settings.min_withdrawal_amount, via get_withdrawal_settings()

@@ -86,10 +86,22 @@ class WithdrawalActivityEvent {
 /// both -- so once there's more than one payment event, this is the
 /// only way to show the first payment's own screenshot on its own
 /// step instead of it being silently replaced by the re-pay's.
+///
+/// [disputeEvents] is this withdrawal's full dispute history from
+/// `audit_logs` (see withdrawalDisputeEventsProvider), oldest first.
+/// Same reasoning as [paymentEvents]: the `withdrawals` row's own
+/// disputeReason/disputedAt only ever holds the *latest* dispute, so a
+/// withdrawal disputed twice would otherwise lose the first dispute's
+/// own reason. Falls back to a single synthetic entry built from
+/// [Withdrawal.disputeReason]/[Withdrawal.disputedAt] when empty, same
+/// as [paymentEvents] falling back to [Withdrawal.paymentSentAt] --
+/// keeps this function working before the real feed has loaded, or for
+/// a caller that hasn't wired the new provider yet.
 List<WithdrawalActivityEvent> buildWithdrawalActivityEvents(
   Withdrawal withdrawal, {
   String? proofImageUrl,
   List<({DateTime paidAt, String? proofUrl})> paymentEvents = const [],
+  List<({DateTime disputedAt, String? reason})> disputeEvents = const [],
 }) {
   final status = withdrawal.status;
   final wentThroughDispute = withdrawal.disputeReason != null;
@@ -136,34 +148,73 @@ List<WithdrawalActivityEvent> buildWithdrawalActivityEvents(
   }
 
   if (wentThroughDispute) {
-    // A completed action in its own right (you already reported it) --
-    // `done`, not `action`. The live "needs a look" emphasis belongs
-    // to whatever comes next: SGX still reviewing it, or nothing
-    // further once resolved.
-    events.add(
-      WithdrawalActivityEvent(
-        title: 'Marked as not received by you',
-        shortLabel: 'Not received',
-        kind: WithdrawalActivityKind.done,
-        note: withdrawal.disputeReason,
-        timestamp: withdrawal.disputedAt,
-        actorLabel: 'You',
-      ),
-    );
+    final fallbackDisputedAt = withdrawal.disputedAt;
+    final effectiveDisputes = disputeEvents.isNotEmpty
+        ? disputeEvents
+        : (fallbackDisputedAt == null
+              ? const <({DateTime disputedAt, String? reason})>[]
+              : [
+                  (
+                    disputedAt: fallbackDisputedAt,
+                    reason: withdrawal.disputeReason,
+                  ),
+                ]);
 
-    // Every payment after the first is SGX re-sending following that
-    // dispute -- each gets its own step with its own screenshot,
-    // chronologically after the dispute that prompted it.
-    for (final repay in paymentEvents.skip(1)) {
+    // A dispute and the re-pay that answers it can repeat (disputed ->
+    // re-paid -> disputed again -> re-paid again -- see
+    // get_withdrawal_dispute_events()'s own comment for why the
+    // `withdrawals` row alone can't show this). Merge both event kinds
+    // and sort by when they actually happened, rather than assuming
+    // exactly one dispute followed by any number of re-pays.
+    final steps =
+        <
+            ({
+              DateTime timestamp,
+              bool isDispute,
+              String? note,
+              String? imageUrl,
+            })
+          >[
+            for (final dispute in effectiveDisputes)
+              (
+                timestamp: dispute.disputedAt,
+                isDispute: true,
+                note: dispute.reason,
+                imageUrl: null,
+              ),
+            for (final repay in paymentEvents.skip(1))
+              (
+                timestamp: repay.paidAt,
+                isDispute: false,
+                note: null,
+                imageUrl: repay.proofUrl,
+              ),
+          ]
+          ..sort((a, b) => a.timestamp.compareTo(b.timestamp));
+
+    for (final step in steps) {
       events.add(
-        WithdrawalActivityEvent(
-          title: 'Payment sent again by SGX',
-          shortLabel: 'Repaid',
-          kind: WithdrawalActivityKind.done,
-          timestamp: repay.paidAt,
-          actorLabel: 'SGX',
-          imageUrl: repay.proofUrl,
-        ),
+        // A completed action in its own right (you already reported
+        // it, or SGX already re-sent it) -- `done`, not `action`. The
+        // live "needs a look" emphasis belongs to whatever comes next:
+        // SGX still reviewing it, or nothing further once resolved.
+        step.isDispute
+            ? WithdrawalActivityEvent(
+                title: 'Marked as not received by you',
+                shortLabel: 'Not received',
+                kind: WithdrawalActivityKind.done,
+                note: step.note,
+                timestamp: step.timestamp,
+                actorLabel: 'You',
+              )
+            : WithdrawalActivityEvent(
+                title: 'Payment sent again by SGX',
+                shortLabel: 'Repaid',
+                kind: WithdrawalActivityKind.done,
+                timestamp: step.timestamp,
+                actorLabel: 'SGX',
+                imageUrl: step.imageUrl,
+              ),
       );
     }
   }

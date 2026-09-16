@@ -3,6 +3,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../../core/auth/auth_controller.dart';
 import '../domain/payout_account.dart';
 import '../domain/withdrawal.dart';
+import '../domain/withdrawal_dispute_event.dart';
 import '../domain/withdrawal_payment_event.dart';
 import 'withdrawals_repository.dart';
 import 'withdrawals_repository_impl.dart';
@@ -69,6 +70,15 @@ final withdrawalPaymentEventsProvider = FutureProvider.autoDispose
     .family<List<WithdrawalPaymentEvent>, String>((ref, withdrawalId) async {
       final repository = ref.watch(withdrawalsRepositoryProvider);
       return repository.getPaymentEvents(withdrawalId);
+    });
+
+/// This withdrawal's full dispute history, oldest first -- normally
+/// one entry, more than one only when a re-paid withdrawal got
+/// disputed again. Mirrors [withdrawalPaymentEventsProvider] exactly.
+final withdrawalDisputeEventsProvider = FutureProvider.autoDispose
+    .family<List<WithdrawalDisputeEvent>, String>((ref, withdrawalId) async {
+      final repository = ref.watch(withdrawalsRepositoryProvider);
+      return repository.getDisputeEvents(withdrawalId);
     });
 
 /// Every payout account the signed-in partner has saved, oldest-added

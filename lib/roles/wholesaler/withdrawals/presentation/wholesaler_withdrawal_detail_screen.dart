@@ -11,6 +11,7 @@ import '../../../../shared/widgets/whatsapp_fab.dart';
 import '../../../../shared/withdrawals/data/withdrawals_providers.dart';
 import '../../../../shared/withdrawals/domain/withdrawal.dart';
 import '../../../../shared/withdrawals/domain/withdrawal_activity_event.dart';
+import '../../../../shared/withdrawals/domain/withdrawal_dispute_event.dart';
 import '../../../../shared/withdrawals/domain/withdrawal_payment_event.dart';
 import '../../../../shared/withdrawals/domain/withdrawal_status.dart';
 import '../../../../shared/withdrawals/presentation/widgets/withdrawal_status_chip.dart';
@@ -139,10 +140,22 @@ class _WithdrawalDetailBodyState extends ConsumerState<_WithdrawalDetailBody> {
         ),
     ];
 
+    // This withdrawal's full dispute history -- normally one entry,
+    // more than one only when a re-paid withdrawal got disputed again.
+    // Mirrors paymentEventRows/paymentEvents exactly.
+    final disputeEventRows =
+        ref.watch(withdrawalDisputeEventsProvider(withdrawal.id)).value ??
+        const <WithdrawalDisputeEvent>[];
+    final disputeEvents = [
+      for (final row in disputeEventRows)
+        (disputedAt: row.disputedAt, reason: row.reason),
+    ];
+
     final events = buildWithdrawalActivityEvents(
       withdrawal,
       proofImageUrl: proofUrlAsync?.value,
       paymentEvents: paymentEvents,
+      disputeEvents: disputeEvents,
     );
 
     return Column(
