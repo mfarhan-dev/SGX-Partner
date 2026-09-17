@@ -6,6 +6,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import 'package:mobile_scanner/mobile_scanner.dart';
 
+import '../../../../app/theme/app_colors.dart';
 import '../../../../app/theme/app_spacing.dart';
 import '../../profile/data/mechanic_profile_providers.dart';
 import '../../wallet/data/mechanic_wallet_providers.dart';
@@ -174,77 +175,99 @@ class _QrScannerScreenState extends ConsumerState<QrScannerScreen> {
 
   @override
   Widget build(BuildContext context) {
-    return PopScope(
-      // Leaving mid-scan shouldn't leave the camera running in the
-      // background.
-      onPopInvokedWithResult: (didPop, _) {
-        if (didPop) _controller.stop();
-      },
-      child: Scaffold(
-        backgroundColor: const Color(0xFF0C0C0E),
-        body: Stack(
-          children: [
-            Positioned.fill(
-              child: MobileScanner(
-                controller: _controller,
-                onDetect: (capture) {
-                  final barcodes = capture.barcodes;
-                  if (barcodes.isEmpty) return;
-                  final value = barcodes.first.rawValue;
-                  if (value != null) _handleCode(value);
-                },
-                errorBuilder: (context, error) {
-                  return ScannerPermissionView(
-                    onRetry: () => _controller.start(),
-                  );
-                },
+    // Idle scanning and the brief "Verifying..." step sit over a
+    // paused/live camera feed and stay fixed-dark regardless of the
+    // device's theme (see _footCaption's own comment) -- light status
+    // bar icons are always right there. But once a final result is
+    // showing, the camera is stopped and there's nothing dark behind
+    // it any more: ScanResultSurface follows the app's actual theme
+    // like every other screen, so the status bar has to match
+    // whichever one -- light or dark -- Settings currently has picked,
+    // not stay pinned to the camera's own icon color. This was
+    // previously missing entirely (no AnnotatedRegion at all on this
+    // screen), which is why the status bar could disappear into
+    // whatever the previous route left behind -- dark icons over this
+    // screen's own dark background.
+    final overlayStyle = _result != null
+        ? (AppColors.isDark(context)
+              ? SystemUiOverlayStyle.light
+              : SystemUiOverlayStyle.dark)
+        : SystemUiOverlayStyle.light;
+
+    return AnnotatedRegion<SystemUiOverlayStyle>(
+      value: overlayStyle,
+      child: PopScope(
+        // Leaving mid-scan shouldn't leave the camera running in the
+        // background.
+        onPopInvokedWithResult: (didPop, _) {
+          if (didPop) _controller.stop();
+        },
+        child: Scaffold(
+          backgroundColor: const Color(0xFF0C0C0E),
+          body: Stack(
+            children: [
+              Positioned.fill(
+                child: MobileScanner(
+                  controller: _controller,
+                  onDetect: (capture) {
+                    final barcodes = capture.barcodes;
+                    if (barcodes.isEmpty) return;
+                    final value = barcodes.first.rawValue;
+                    if (value != null) _handleCode(value);
+                  },
+                  errorBuilder: (context, error) {
+                    return ScannerPermissionView(
+                      onRetry: () => _controller.start(),
+                    );
+                  },
+                ),
               ),
-            ),
-            SafeArea(
-              child: Column(
-                children: [
-                  _topBar(context),
-                  Expanded(
-                    child: Center(
-                      child: SizedBox.square(
-                        dimension: MediaQuery.sizeOf(context).width * 0.58,
-                        child: DecoratedBox(
-                          decoration: BoxDecoration(
-                            border: Border.all(
-                              color: Colors.white.withValues(alpha: 0.55),
-                              width: 2,
-                              style: BorderStyle.solid,
+              SafeArea(
+                child: Column(
+                  children: [
+                    _topBar(context),
+                    Expanded(
+                      child: Center(
+                        child: SizedBox.square(
+                          dimension: MediaQuery.sizeOf(context).width * 0.58,
+                          child: DecoratedBox(
+                            decoration: BoxDecoration(
+                              border: Border.all(
+                                color: Colors.white.withValues(alpha: 0.55),
+                                width: 2,
+                                style: BorderStyle.solid,
+                              ),
+                              borderRadius: BorderRadius.circular(18),
                             ),
-                            borderRadius: BorderRadius.circular(18),
                           ),
                         ),
                       ),
                     ),
-                  ),
-                  _footCaption(context),
-                ],
-              ),
-            ),
-            // A code was captured but the server hasn't answered yet --
-            // real on a 3G/2G connection, where scan_qr_code()'s
-            // round-trip can run several seconds. A looped spinner
-            // plus a plain "what's happening" label is the right
-            // pattern for an operation with no known duration (per
-            // Smashing Magazine's progress-indicator guidance:
-            // https://www.smashingmagazine.com/2016/12/best-practices-for-animated-progress-indicators/)
-            // -- there's nothing to show a percentage of, so an
-            // indeterminate indicator with real status text beats a
-            // silent frozen camera image every time.
-            if (_processing && _result == null)
-              const Positioned.fill(child: _VerifyingOverlay()),
-            if (_result != null)
-              Positioned.fill(
-                child: ScanResultSurface(
-                  result: _result!,
-                  onScanAnother: _scanAnother,
+                    _footCaption(context),
+                  ],
                 ),
               ),
-          ],
+              // A code was captured but the server hasn't answered yet --
+              // real on a 3G/2G connection, where scan_qr_code()'s
+              // round-trip can run several seconds. A looped spinner
+              // plus a plain "what's happening" label is the right
+              // pattern for an operation with no known duration (per
+              // Smashing Magazine's progress-indicator guidance:
+              // https://www.smashingmagazine.com/2016/12/best-practices-for-animated-progress-indicators/)
+              // -- there's nothing to show a percentage of, so an
+              // indeterminate indicator with real status text beats a
+              // silent frozen camera image every time.
+              if (_processing && _result == null)
+                const Positioned.fill(child: _VerifyingOverlay()),
+              if (_result != null)
+                Positioned.fill(
+                  child: ScanResultSurface(
+                    result: _result!,
+                    onScanAnother: _scanAnother,
+                  ),
+                ),
+            ],
+          ),
         ),
       ),
     );

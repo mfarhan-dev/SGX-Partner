@@ -6,11 +6,16 @@ import '../../../../../app/theme/app_colors.dart';
 import '../../../../../app/theme/app_spacing.dart';
 import '../../domain/scan_result.dart';
 
-/// The scanner's own result overlay -- a solid dark background over
-/// the paused camera preview (not translucent: a lower-alpha scrim let
-/// the idle screen's own aiming-frame decoration show faintly through,
-/// landing right behind the button and reading as a broken dialog),
-/// told apart by icon/tone alone (same "color carries the state" rule
+/// The scanner's own result overlay. By the time this shows, the
+/// camera has already stopped (see qr_scanner_screen.dart) -- there is
+/// nothing dark behind it any more, so unlike the idle scanning view
+/// and its "Verifying..." step, this one is a normal themed screen
+/// (`AppColors.xOf(context)`, same rule as everywhere else in the
+/// app), not fixed dark. Solid, not translucent: a lower-alpha scrim
+/// let the idle screen's own aiming-frame decoration show faintly
+/// through, landing right behind the button and reading as a broken
+/// dialog -- still true regardless of which theme this resolves to.
+/// Told apart by icon/tone alone (same "color carries the state" rule
 /// as WithdrawalStatusChip), with the credited amount in the same Sora
 /// display face the Withdrawal Detail screen already uses for money.
 ///
@@ -62,7 +67,7 @@ class ScanResultSurface extends StatelessWidget {
         : AppColors.error;
 
     return Container(
-      color: const Color(0xFF0B0B0D),
+      color: AppColors.backgroundOf(context),
       padding: const EdgeInsets.symmetric(horizontal: AppSpacing.lg),
       alignment: Alignment.center,
       child: Column(
@@ -84,7 +89,7 @@ class ScanResultSurface extends StatelessWidget {
               Text(
                 '+Rs. ${result.rewardAmount}',
                 style: GoogleFonts.sora(
-                  color: Colors.white,
+                  color: AppColors.textOf(context),
                   fontWeight: FontWeight.w800,
                   fontSize: 36,
                 ),
@@ -96,8 +101,8 @@ class ScanResultSurface extends StatelessWidget {
                     : alreadyScanned
                     ? 'Already scanned'
                     : "Couldn't add reward",
-                style: const TextStyle(
-                  color: Colors.white,
+                style: TextStyle(
+                  color: AppColors.textOf(context),
                   fontWeight: FontWeight.w800,
                   fontSize: 21,
                 ),
@@ -106,7 +111,10 @@ class ScanResultSurface extends StatelessWidget {
             Text(
               result.message,
               textAlign: TextAlign.center,
-              style: const TextStyle(color: Colors.white70, fontSize: 14.5),
+              style: TextStyle(
+                color: AppColors.mutedTextOf(context),
+                fontSize: 14.5,
+              ),
             ),
           ],
           const SizedBox(height: AppSpacing.xl),
@@ -150,8 +158,11 @@ class ScanResultSurface extends StatelessWidget {
               child: OutlinedButton(
                 onPressed: onScanAnother,
                 style: OutlinedButton.styleFrom(
-                  foregroundColor: Colors.white,
-                  side: const BorderSide(color: Colors.white54, width: 1.5),
+                  foregroundColor: AppColors.textOf(context),
+                  side: BorderSide(
+                    color: AppColors.outlineOf(context),
+                    width: 1.5,
+                  ),
                   shape: const RoundedRectangleBorder(
                     borderRadius: BorderRadius.all(Radius.circular(12)),
                   ),
@@ -222,10 +233,10 @@ class _ClaimedReceiptCard extends StatelessWidget {
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.center,
         children: [
-          const Text(
+          Text(
             'Already claimed',
             style: TextStyle(
-              color: Colors.white,
+              color: AppColors.textOf(context),
               fontWeight: FontWeight.w800,
               fontSize: 21,
             ),
@@ -233,8 +244,8 @@ class _ClaimedReceiptCard extends StatelessWidget {
           const SizedBox(height: AppSpacing.lg),
           Container(
             decoration: BoxDecoration(
-              color: const Color(0xFF151310),
-              border: Border.all(color: Colors.white.withValues(alpha: 0.08)),
+              color: AppColors.surfaceContainerOf(context),
+              border: Border.all(color: AppColors.outlineOf(context)),
               borderRadius: BorderRadius.circular(16),
             ),
             clipBehavior: Clip.antiAlias,
@@ -247,15 +258,13 @@ class _ClaimedReceiptCard extends StatelessWidget {
                     padding: const EdgeInsets.fromLTRB(16, 14, 16, 14),
                     decoration: BoxDecoration(
                       border: Border(
-                        bottom: BorderSide(
-                          color: Colors.white.withValues(alpha: 0.12),
-                        ),
+                        bottom: BorderSide(color: AppColors.outlineOf(context)),
                       ),
                     ),
                     child: Text(
                       code!,
                       style: TextStyle(
-                        color: Colors.white.withValues(alpha: 0.55),
+                        color: AppColors.mutedTextOf(context),
                         fontWeight: FontWeight.w700,
                         fontSize: 13,
                         letterSpacing: 0.4,
@@ -315,14 +324,14 @@ class _ReceiptRow extends StatelessWidget {
           Text(
             label,
             style: TextStyle(
-              color: Colors.white.withValues(alpha: 0.55),
+              color: AppColors.mutedTextOf(context),
               fontSize: 14,
             ),
           ),
           Text(
             value,
-            style: const TextStyle(
-              color: Colors.white,
+            style: TextStyle(
+              color: AppColors.textOf(context),
               fontWeight: FontWeight.w700,
               fontSize: 16,
             ),

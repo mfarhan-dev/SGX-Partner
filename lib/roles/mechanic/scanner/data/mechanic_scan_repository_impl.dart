@@ -31,16 +31,60 @@ class SupabaseMechanicScanRepository implements MechanicScanRepository {
       );
     }
 
-    final Map<String, dynamic> row;
     try {
-      row = await _client
+      final row = await _client
           .rpc('scan_qr_code', params: {'p_qr_id': trimmed})
           .single();
+
+      // Parsing the row is inside this same try -- not just the RPC
+      // call -- on purpose. scan_qr_code()'s columns are all NOT NULL
+      // today so this never actually throws, but if that contract ever
+      // drifts (a new nullable column, a `result` value this switch
+      // doesn't know about), the mechanic gets the same "couldn't
+      // reach SGX" message and a working Try Again button instead of
+      // an uncaught exception freezing them on "Verifying..." forever
+      // -- _handleCode has no try/catch of its own around this call.
+      final result = row['result'] as String;
+      switch (result) {
+        case 'success':
+          final reward = row['reward'] as int;
+          return ScanResult.success(
+            message: 'Rs. $reward added to your wallet.',
+            rewardAmount: reward,
+          );
+        case 'already_scanned':
+          final claimedByYou = row['scanned_by_you'] as bool? ?? false;
+          final claimedAt = row['scanned_at'] != null
+              ? DateTime.parse(row['scanned_at'] as String)
+              : null;
+          return ScanResult.failure(
+            message: claimedByYou
+                ? 'You already scanned this code.'
+                : 'This QR code has already been claimed.',
+            failureReason: ScanFailureReason.alreadyScanned,
+            code: trimmed,
+            claimedByName: row['scanned_by_name'] as String?,
+            claimedByWorkshop: row['scanned_by_workshop'] as String?,
+            claimedAt: claimedAt,
+            claimedByYou: claimedByYou,
+          );
+        case 'not_active':
+          return const ScanResult.failure(
+            message: 'This QR code is not active yet.',
+            failureReason: ScanFailureReason.expired,
+          );
+        case 'not_found':
+        default:
+          return const ScanResult.failure(
+            message: "This code isn't a recognized SGX QR code.",
+            failureReason: ScanFailureReason.invalid,
+          );
+      }
     } on PostgrestException catch (error) {
       // scan_qr_code() only ever raises for "no active mechanic
       // profile" (errcode 28000) -- every other outcome (not found,
       // already scanned, not active) comes back as a normal row
-      // handled below, precisely so a routine "already used" result
+      // handled above, precisely so a routine "already used" result
       // doesn't have to be parsed out of an exception message.
       if (error.code == '28000') {
         return const ScanResult.failure(
@@ -57,43 +101,6 @@ class SupabaseMechanicScanRepository implements MechanicScanRepository {
         message: 'Could not reach SGX. Check your connection and try again.',
         failureReason: ScanFailureReason.network,
       );
-    }
-
-    final result = row['result'] as String;
-    switch (result) {
-      case 'success':
-        final reward = row['reward'] as int;
-        return ScanResult.success(
-          message: 'Rs. $reward added to your wallet.',
-          rewardAmount: reward,
-        );
-      case 'already_scanned':
-        final claimedByYou = row['scanned_by_you'] as bool? ?? false;
-        final claimedAt = row['scanned_at'] != null
-            ? DateTime.parse(row['scanned_at'] as String)
-            : null;
-        return ScanResult.failure(
-          message: claimedByYou
-              ? 'You already scanned this code.'
-              : 'This QR code has already been claimed.',
-          failureReason: ScanFailureReason.alreadyScanned,
-          code: trimmed,
-          claimedByName: row['scanned_by_name'] as String?,
-          claimedByWorkshop: row['scanned_by_workshop'] as String?,
-          claimedAt: claimedAt,
-          claimedByYou: claimedByYou,
-        );
-      case 'not_active':
-        return const ScanResult.failure(
-          message: 'This QR code is not active yet.',
-          failureReason: ScanFailureReason.expired,
-        );
-      case 'not_found':
-      default:
-        return const ScanResult.failure(
-          message: "This code isn't a recognized SGX QR code.",
-          failureReason: ScanFailureReason.invalid,
-        );
     }
   }
 }
