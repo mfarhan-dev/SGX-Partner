@@ -87,7 +87,20 @@ class _QrScannerScreenState extends ConsumerState<QrScannerScreen> {
       // that shows a balance or the activity feed so they're correct
       // the instant the mechanic backs out of this screen, same
       // pattern as after a withdrawal request.
+      //
+      // All three are session-cached (deliberately NOT .autoDispose,
+      // see handoff.md), so nothing here refetches on its own -- if a
+      // provider isn't listed, Home keeps showing the pre-scan number
+      // until the app is restarted.
+      //
+      // `available` (points_balance, via the profile) and
+      // `lifetime earned` are BOTH credited by this scan and are two
+      // different reads, so both have to be invalidated. Home's
+      // `pending` is deliberately absent: it's derived from
+      // withdrawalsListProvider, and a scan never creates or settles a
+      // withdrawal.
       ref.invalidate(mechanicProfileDataProvider);
+      ref.invalidate(mechanicLifetimeEarnedProvider);
       ref.invalidate(mechanicWalletActivityProvider);
     }
   }
