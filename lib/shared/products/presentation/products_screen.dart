@@ -41,6 +41,19 @@ class _ProductsScreenState extends ConsumerState<ProductsScreen> {
   Widget build(BuildContext context) {
     final productsAsync = ref.watch(catalogProductsProvider);
 
+    // Same reasoning as the wholesaler ledger and QR Progress: the
+    // catalog changes from the admin side, outside this app, and
+    // catalogProductsProvider is deliberately session-cached -- without
+    // this there was no way to see a new/updated product short of
+    // restarting the app. Unlike balance/campaigns/withdrawals, a
+    // catalog edit doesn't raise any user_notifications row (there's no
+    // "this partner's product just changed" event to react to), so
+    // pull-to-refresh is the right mechanism here, not a silent one.
+    Future<void> refresh() async {
+      ref.invalidate(catalogProductsProvider);
+      await ref.read(catalogProductsProvider.future);
+    }
+
     return Scaffold(
       appBar: AppBar(
         title: const Text('Products'),
@@ -55,16 +68,28 @@ class _ProductsScreenState extends ConsumerState<ProductsScreen> {
         ],
       ),
       body: SafeArea(
-        child: productsAsync.when(
-          data: (products) => _buildGrid(context, products),
-          loading: () => const ProductsGridSkeleton(),
-          error: (error, stackTrace) => Center(
-            child: Padding(
-              padding: const EdgeInsets.all(24),
-              child: Text(
-                'Could not load products. Pull to refresh or try again later.',
-                textAlign: TextAlign.center,
-                style: TextStyle(color: AppColors.mutedTextOf(context)),
+        child: RefreshIndicator(
+          onRefresh: refresh,
+          child: productsAsync.when(
+            data: (products) => _buildGrid(context, products),
+            loading: () => const SingleChildScrollView(
+              physics: AlwaysScrollableScrollPhysics(),
+              child: ProductsGridSkeleton(),
+            ),
+            error: (error, stackTrace) => SingleChildScrollView(
+              physics: const AlwaysScrollableScrollPhysics(),
+              child: Padding(
+                padding: const EdgeInsets.symmetric(
+                  horizontal: 24,
+                  vertical: 96,
+                ),
+                child: Center(
+                  child: Text(
+                    'Could not load products. Pull to refresh or try again later.',
+                    textAlign: TextAlign.center,
+                    style: TextStyle(color: AppColors.mutedTextOf(context)),
+                  ),
+                ),
               ),
             ),
           ),
@@ -81,6 +106,11 @@ class _ProductsScreenState extends ConsumerState<ProductsScreen> {
     final filtered = _filter(allProducts);
 
     return ListView(
+      // Explicit, not the default -- a short catalog (today's real
+      // count is a handful of products) doesn't fill the viewport, and
+      // without this a pull gesture has nothing to overscroll against,
+      // so RefreshIndicator silently never triggers.
+      physics: const AlwaysScrollableScrollPhysics(),
       padding: const EdgeInsets.all(16),
       children: [
         if (categories.isNotEmpty) ...[
