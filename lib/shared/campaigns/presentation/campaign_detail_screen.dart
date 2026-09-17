@@ -73,6 +73,20 @@ class CampaignDetailScreen extends ConsumerWidget {
             child: Stack(
               children: [
                 campaignsAsync.when(
+                  // Riverpod's default (true) shows the previous list
+                  // while a refresh is in flight, to avoid flickering --
+                  // right everywhere else, wrong here specifically: the
+                  // notification tap that opens this screen is exactly
+                  // what invalidated activeCampaignsProvider (see
+                  // PushNotificationsCoordinator._refreshFor), because
+                  // the campaign this screen wants isn't IN the old list
+                  // yet. Showing that stale list during the refetch made
+                  // a real campaign read as "no longer available" for
+                  // the second or two the fresh fetch takes. false
+                  // forces the skeleton for that window instead, so
+                  // "not found" only ever means the fetch actually
+                  // finished and the campaign genuinely isn't there.
+                  skipLoadingOnRefresh: false,
                   data: (_) => campaign == null
                       ? const _CampaignNotFound()
                       : _CampaignDetailBody(campaign: campaign),
