@@ -254,9 +254,23 @@ class PushNotificationsCoordinator {
     // listener: navigating from inside a `notifyListeners` pass is how you
     // get "setState() or markNeedsBuild() called during build".
     //
-    // `push`, not `go`: the partner tapped a notification while the app had
+    // `push` for a real pushed screen (a campaign, a product, a
+    // withdrawal) -- the partner tapped a notification while the app had
     // a perfectly good screen underneath, and back should return them to
     // it. Same reasoning as every card tap in this app.
+    //
+    // `go`, never `push`, for a bottom-nav TAB (see `_shellTabRoutes`) --
+    // same rule the in-app bell already follows for these exact
+    // destinations (`sgx_app_bar.dart`, each Home screen's own bell).
+    // Pushing a tab route while a *different* tab is already lower in
+    // the stack puts two copies of the same ShellRoute-wrapped subtree
+    // in one Navigator at once, which go_router cannot key uniquely --
+    // this is exactly what crashed
+    // (`NavigatorState._debugCheckDuplicatedPageKeys`) scanning a QR
+    // code (pushes /mechanic/scan on top of Home), backgrounding, then
+    // tapping the reward-credited push (tried to push /mechanic/wallet
+    // on top of that). A campaign push worked fine in the same test
+    // because /campaigns sits outside the shell entirely.
     //
     // Caught because `deepLink` is a string chosen by whoever sent the
     // push, not by this app. `PushMessage` guarantees it's an internal
@@ -264,10 +278,29 @@ class PushNotificationsCoordinator {
     // leave the partner on the screen they were already on.
     Future.microtask(() {
       try {
-        router.push(deepLink);
+        if (_shellTabRoutes.contains(deepLink)) {
+          router.go(deepLink);
+        } else {
+          router.push(deepLink);
+        }
       } catch (_) {}
     });
   }
+
+  /// Every route nested under `ShellRoute` in app_routes.dart -- the
+  /// bottom-nav tabs, not a pushed detail screen. See
+  /// `_flushPendingDeepLink`'s own comment for why these specifically
+  /// must never be `push`ed.
+  static const _shellTabRoutes = {
+    '/products',
+    '/mechanic/home',
+    '/mechanic/wallet',
+    '/mechanic/profile',
+    '/wholesaler/home',
+    '/wholesaler/qr-progress',
+    '/wholesaler/wallet',
+    '/wholesaler/profile',
+  };
 
   Future<void> _registerCurrentToken() async {
     final token = await _ref
