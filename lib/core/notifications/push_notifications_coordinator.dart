@@ -7,6 +7,7 @@ import '../../app/router/app_router.dart';
 import '../../roles/mechanic/profile/data/mechanic_profile_providers.dart';
 import '../../roles/mechanic/wallet/data/mechanic_wallet_providers.dart';
 import '../../roles/wholesaler/profile/data/wholesaler_profile_providers.dart';
+import '../../roles/wholesaler/qr_progress/data/wholesaler_qr_progress_providers.dart';
 import '../../roles/wholesaler/wallet/data/khata_ledger_providers.dart';
 import '../../shared/campaigns/data/active_campaigns_providers.dart';
 import '../../shared/withdrawals/data/withdrawals_providers.dart';
@@ -203,6 +204,11 @@ class PushNotificationsCoordinator {
         _ref.invalidate(wholesalerProfileDataProvider);
         _ref.invalidate(wholesalerLifetimeEarnedProvider);
         _ref.invalidate(khataLedgerProvider);
+        // A wholesaler's own scanned/total counts per invoice line --
+        // the exact same qr_codes row flipping to 'scanned' that
+        // credits the reward above also moves this. Left out of the
+        // first pass; same event, same fix.
+        _ref.invalidate(wholesalerQrProgressProvider);
       case 'withdrawal_submitted':
       case 'withdrawal_disputed':
       case 'withdrawal_auto_confirmed':
