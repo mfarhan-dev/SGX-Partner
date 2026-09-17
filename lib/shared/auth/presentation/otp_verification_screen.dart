@@ -3,7 +3,6 @@ import 'dart:async';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
-import 'package:supabase_flutter/supabase_flutter.dart' show Supabase;
 
 import '../../../app/router/route_guards.dart';
 import '../../../app/theme/app_colors.dart';
@@ -16,6 +15,17 @@ import '../../../shared/widgets/sgx_logo.dart';
 /// Resend cooldown, in seconds, before the user can request a new code.
 const _resendCooldownSeconds = 30;
 
+/// No longer auto-fills the code for testing -- it used to call
+/// `dev_get_latest_otp(p_phone)` right after `initState`, but that RPC
+/// was `SECURITY DEFINER` and grantable to `anon`, meaning anyone
+/// holding this project's public anon key (shipped inside the APK by
+/// design) could read ANY partner's current login OTP with no session
+/// of their own -- a full account-takeover path on an app that moves
+/// real money. `anon`/`authenticated` EXECUTE has been revoked on that
+/// function; it's callable only from the SQL editor now
+/// (`select dev_get_latest_otp('03XXXXXXXXX')`), which is how the code
+/// should be looked up for testing until a real SMS provider is
+/// connected and `dev_otp_log` is retired entirely.
 class OtpVerificationScreen extends ConsumerStatefulWidget {
   const OtpVerificationScreen({super.key});
 
@@ -35,7 +45,6 @@ class _OtpVerificationScreenState extends ConsumerState<OtpVerificationScreen> {
   void initState() {
     super.initState();
     _startResendCountdown();
-    _autofillDevOtp();
   }
 
   @override
@@ -63,31 +72,6 @@ class _OtpVerificationScreenState extends ConsumerState<OtpVerificationScreen> {
     });
   }
 
-  /// DEV ONLY: pulls the real OTP just captured by the Send SMS Hook
-  /// (see dev_get_latest_otp / dev_otp_log) so testing doesn't need a
-  /// manual DB lookup or a race against the expiry window. Remove this
-  /// once a real SMS provider is connected.
-  Future<void> _autofillDevOtp() async {
-    final phone = ref.read(authControllerProvider).phoneNumber;
-    if (phone == null) return;
-    // Small delay so the hook's insert has landed before we ask.
-    await Future<void>.delayed(const Duration(milliseconds: 900));
-    if (!mounted) return;
-    try {
-      final otp =
-          await Supabase.instance.client.rpc(
-                'dev_get_latest_otp',
-                params: {'p_phone': phone},
-              )
-              as String?;
-      if (otp != null && mounted) {
-        _controller.text = otp;
-      }
-    } catch (_) {
-      // Best-effort only — user can still type the code manually.
-    }
-  }
-
   Future<void> _resend() async {
     if (_secondsRemaining > 0) return;
     final phone = ref.read(authControllerProvider).phoneNumber;
@@ -98,7 +82,6 @@ class _OtpVerificationScreenState extends ConsumerState<OtpVerificationScreen> {
     });
     await ref.read(authControllerProvider.notifier).sendOtp(phone);
     _startResendCountdown();
-    await _autofillDevOtp();
   }
 
   @override
