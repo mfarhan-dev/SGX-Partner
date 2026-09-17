@@ -4,6 +4,12 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 
 import '../../app/router/app_router.dart';
+import '../../roles/mechanic/profile/data/mechanic_profile_providers.dart';
+import '../../roles/mechanic/wallet/data/mechanic_wallet_providers.dart';
+import '../../roles/wholesaler/profile/data/wholesaler_profile_providers.dart';
+import '../../roles/wholesaler/wallet/data/khata_ledger_providers.dart';
+import '../../shared/campaigns/data/active_campaigns_providers.dart';
+import '../../shared/withdrawals/data/withdrawals_providers.dart';
 import '../auth/auth_controller.dart';
 import '../auth/auth_state.dart';
 import '../firebase/crashlytics_service.dart';
@@ -34,7 +40,7 @@ final pushNotificationsCoordinatorProvider =
 
 /// The one place that knows how push, the session, and navigation relate.
 ///
-/// Three jobs, all of which need to see more than one subsystem at once,
+/// Four jobs, all of which need to see more than one subsystem at once,
 /// which is why they live together rather than inside
 /// [PushNotificationsService]:
 ///
@@ -42,7 +48,21 @@ final pushNotificationsCoordinatorProvider =
 ///   signed in, and clear it when they leave;
 /// * tag Crashlytics reports with that same partner;
 /// * turn a tapped notification into navigation, once there is somewhere
-///   sane to navigate to.
+///   sane to navigate to;
+/// * refresh whichever cached provider(s) a push's `type` says changed
+///   -- see [_refreshFor]. This is deliberately the app's only "pull to
+///   refresh" for Home, Withdrawals, and Campaigns: every value shown
+///   there (balance, lifetime earned, pending, the campaigns list) only
+///   ever changes through an action that already raises a
+///   `user_notifications` row server-side, so reacting to that push is
+///   both necessary and sufficient -- a manual pull-to-refresh would
+///   only ever recheck for the same events this already reacts to
+///   live. The one gap this can't close: a push that arrives while the
+///   app is backgrounded (not killed, not foregrounded) and is never
+///   tapped runs no app code at all (see
+///   [PushNotificationsService.onMessageReceived]) -- that data is
+///   stale until the partner taps it, backgrounds-then-foregrounds
+///   into a fresh push, or the provider refetches for its own reason.
 ///
 /// Started once, from the root widget.
 class PushNotificationsCoordinator {
@@ -51,6 +71,7 @@ class PushNotificationsCoordinator {
   final Ref _ref;
 
   StreamSubscription<PushMessage>? _tapSubscription;
+  StreamSubscription<PushMessage>? _messageSubscription;
   StreamSubscription<String>? _tokenSubscription;
   GoRouter? _router;
 
@@ -74,6 +95,9 @@ class PushNotificationsCoordinator {
       final service = _ref.read(pushNotificationsServiceProvider);
 
       _tapSubscription = service.onNotificationTapped.listen(_onTap);
+      _messageSubscription = service.onMessageReceived.listen(
+        (message) => _refreshFor(message.type),
+      );
       _tokenSubscription = service.onTokenChanged.listen(_saveToken);
 
       // The router tells us when navigation has settled enough to honour a
@@ -99,6 +123,7 @@ class PushNotificationsCoordinator {
   Future<void> dispose() async {
     _router?.routerDelegate.removeListener(_flushPendingDeepLink);
     await _tapSubscription?.cancel();
+    await _messageSubscription?.cancel();
     await _tokenSubscription?.cancel();
   }
 
@@ -140,6 +165,12 @@ class PushNotificationsCoordinator {
   }
 
   void _onTap(PushMessage message) {
+    // Refreshed unconditionally, before the deep-link check below --
+    // whatever screen the partner lands on (or is already looking at
+    // under the notification shade) should show the fresh number, not
+    // whatever was cached from before this event happened.
+    _refreshFor(message.type);
+
     final deepLink = message.deepLink;
     // A notification with no route is still a perfectly good
     // notification — it just has nothing to open.
@@ -147,6 +178,48 @@ class PushNotificationsCoordinator {
 
     _pendingDeepLink = deepLink;
     _flushPendingDeepLink();
+  }
+
+  /// The single map from "what happened server-side" to "what's now
+  /// stale on-device" -- see the class doc comment for why this
+  /// replaces pull-to-refresh rather than sitting alongside it.
+  /// Invalidating a provider nobody is currently watching is free (it
+  /// just refetches lazily next time something watches it), so this
+  /// never checks which screen is on-screen right now.
+  void _refreshFor(String? type) {
+    switch (type) {
+      case 'qr_reward_credited':
+        // Both roles invalidated unconditionally rather than branching
+        // on the signed-in partner's own role: a wholesaler's reward
+        // is credited by a MECHANIC's scan, so the push reaches the
+        // wholesaler while the app already believes it's mid-session
+        // as that wholesaler -- there is no cross-role case where
+        // invalidating the "wrong" role's providers could ever fire
+        // against a live session, and skipping the branch removes a
+        // whole class of "forgot to handle the other role" bug.
+        _ref.invalidate(mechanicProfileDataProvider);
+        _ref.invalidate(mechanicLifetimeEarnedProvider);
+        _ref.invalidate(mechanicWalletActivityProvider);
+        _ref.invalidate(wholesalerProfileDataProvider);
+        _ref.invalidate(wholesalerLifetimeEarnedProvider);
+        _ref.invalidate(khataLedgerProvider);
+      case 'withdrawal_submitted':
+      case 'withdrawal_disputed':
+      case 'withdrawal_auto_confirmed':
+      case 'withdrawal_payment_sent':
+      case 'withdrawal_refunded':
+        // withdrawalsListProvider is what Home's own `pending` figure
+        // is derived from client-side -- invalidating it is the whole
+        // fix, no separate "pending" state to touch. The profile
+        // providers are included too: a refund changes points_balance
+        // server-side, and invalidating the other role's profile when
+        // it didn't change is a wasted refetch, not a bug.
+        _ref.invalidate(withdrawalsListProvider);
+        _ref.invalidate(mechanicProfileDataProvider);
+        _ref.invalidate(wholesalerProfileDataProvider);
+      case 'campaign_published':
+        _ref.invalidate(activeCampaignsProvider);
+    }
   }
 
   /// Navigates to a queued deep link, but only once the app is actually in

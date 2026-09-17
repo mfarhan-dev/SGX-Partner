@@ -42,6 +42,14 @@ class PushMessage {
   final String? title;
   final String? body;
 
+  /// The `user_notifications.type` this push was raised from (e.g.
+  /// `qr_reward_credited`, `withdrawal_payment_sent`,
+  /// `campaign_published`) -- see `notify_push_on_user_notification()`
+  /// on the DB side, which always forwards it. Used to decide which
+  /// cached provider(s) a received/tapped push should invalidate,
+  /// without hardcoding a route-to-provider mapping in two places.
+  String? get type => _nonEmpty(data['type']);
+
   /// In-app route to open when the partner taps this notification, e.g.
   /// `/mechanic/withdrawals/abc-123`. Null when the push is purely
   /// informational.

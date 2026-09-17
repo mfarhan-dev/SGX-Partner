@@ -73,10 +73,23 @@ class PushNotificationsService {
 
   final _tapController = StreamController<PushMessage>.broadcast();
   final _tokenController = StreamController<String>.broadcast();
+  final _messageController = StreamController<PushMessage>.broadcast();
 
   /// Notifications the partner tapped, from any app state. Listened to
   /// once, app-wide, by `PushNotificationsCoordinator`.
   Stream<PushMessage> get onNotificationTapped => _tapController.stream;
+
+  /// Every push that arrives while the app is in the foreground --
+  /// whether or not the partner ever taps it. Distinct from
+  /// [onNotificationTapped]: a reward/withdrawal/campaign push landing
+  /// while Home is already open should refresh that data right away,
+  /// not wait for a tap that may never come. Only fires for
+  /// foreground arrivals -- a background/killed-state push runs
+  /// `handleBackgroundMessage` in a bare isolate with no `Ref` to
+  /// invalidate anything with; that data catches up whenever the
+  /// partner next taps the notification or the provider naturally
+  /// refetches (cold start, or after their own action).
+  Stream<PushMessage> get onMessageReceived => _messageController.stream;
 
   /// Every FCM token this install has, including refreshes. Not a one-shot
   /// getter because FCM rotates tokens on its own schedule — a stored
@@ -164,6 +177,7 @@ class PushNotificationsService {
   Future<void> dispose() async {
     await _tapController.close();
     await _tokenController.close();
+    await _messageController.close();
   }
 
   Future<void> _configureLocalNotifications() async {
@@ -220,12 +234,19 @@ class PushNotificationsService {
 
   /// A push that arrived while the partner is actively using the app.
   ///
-  /// On Android nothing is shown automatically in this state, so we post
-  /// an equivalent local notification into our own channel.
+  /// Two independent things happen here, deliberately in this order:
+  /// emit to [onMessageReceived] first (on every platform -- data
+  /// refresh doesn't depend on whether a banner gets drawn), then, on
+  /// Android only, post an equivalent local notification into our own
+  /// channel (iOS already draws its own banner while foregrounded, via
+  /// [_configureForegroundPresentation]; doing it on both would show
+  /// the same push twice there).
   Future<void> _onForegroundMessage(RemoteMessage message) async {
+    final push = PushMessage.fromRemoteMessage(message);
+    if (!_messageController.isClosed) _messageController.add(push);
+
     if (defaultTargetPlatform != TargetPlatform.android) return;
 
-    final push = PushMessage.fromRemoteMessage(message);
     final title = push.title;
     final body = push.body;
     // Data-only pushes (a silent balance refresh, say) carry no text;
