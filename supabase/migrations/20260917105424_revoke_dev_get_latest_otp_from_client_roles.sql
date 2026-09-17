@@ -1,0 +1,17 @@
+-- dev_get_latest_otp(p_phone) is SECURITY DEFINER and was granted EXECUTE
+-- to anon and authenticated, which meant anyone holding this project's
+-- public anon key -- shipped inside the APK by design -- could read the
+-- current login OTP for ANY partner's phone number, at any time, with no
+-- session of their own. That is a full account-takeover path on an app
+-- that moves real money (withdrawals to a chosen payout account).
+--
+-- It was called from the client for a real reason: the app's own OTP
+-- screen (see lib/shared/auth/presentation/otp_verification_screen.dart)
+-- auto-fills the code so testing doesn't need a manual DB lookup, since
+-- no real SMS provider is connected yet. That client call is being
+-- removed in this same change -- keeping it would mean every login makes
+-- a doomed RPC call that always fails from here on.
+--
+-- Left callable by postgres/service_role only, so staff can still look
+-- up the latest OTP for a test phone directly from the SQL editor.
+revoke execute on function public.dev_get_latest_otp(text) from anon, authenticated, public;
