@@ -26,9 +26,12 @@ class PartnerGreeting extends StatelessWidget {
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              const Text(
+              Text(
                 'Assalam-o-Alaikum',
-                style: TextStyle(fontSize: 12, color: AppColors.mutedText),
+                style: TextStyle(
+                  fontSize: 12,
+                  color: AppColors.mutedTextOf(context),
+                ),
               ),
               Text(
                 name,
